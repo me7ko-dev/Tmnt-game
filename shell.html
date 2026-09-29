@@ -1,0 +1,50 @@
+<title>Костенурките нинджи</title>
+<meta name="theme-color" content="#0b0f0c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Russo+One&display=swap">
+<style>
+/* Аркадна игра: платното е в центъра, контролите са върху него (хоризонтално) или под него (вертикално). */
+:root{
+  --bg:#0b0f0c; --ink:#eaffea; --shell:#5fae3e; --pizza:#ffd23f; --danger:#e0342f;
+  --btn:rgba(20,34,24,.55); --btn-edge:rgba(234,255,234,.55);
+  --fp:"Press Start 2P","Courier New",monospace;
+  color-scheme:dark;
+}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
+  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+#cv{position:fixed;left:0;top:0;display:block;background:#000}
+#ctl{position:fixed;inset:0;pointer-events:none}
+#ctl[hidden]{display:none!important}
+#stickZone{position:absolute;left:0;bottom:0;width:48%;height:72%;pointer-events:auto;touch-action:none}
+#stickBase{position:fixed;width:112px;height:112px;margin:-56px 0 0 -56px;border-radius:50%;
+  border:2px solid var(--btn-edge);background:var(--btn);opacity:.45;pointer-events:none;
+  left:calc(24px + 56px + env(safe-area-inset-left,0px));top:calc(100% - 96px - env(safe-area-inset-bottom,0px))}
+#stickBase.on{opacity:.9}
+#knob{position:absolute;left:50%;top:50%;width:50px;height:50px;border-radius:50%;
+  transform:translate(-50%,-50%);background:rgba(234,255,234,.55);border:2px solid #fff}
+.btn{position:absolute;pointer-events:auto;touch-action:none;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font:9px var(--fp);color:#fff;
+  text-shadow:0 1px 0 #000;border:3px solid var(--btn-edge);background:var(--btn)}
+.btn{opacity:.8}
+.btn.down{transform:scale(.92);background:rgba(234,255,234,.35)}
+#btnA{width:84px;height:84px;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(28px + env(safe-area-inset-bottom,0px));background:rgba(224,52,47,.5)}
+#btnB{width:70px;height:70px;right:calc(116px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));background:rgba(47,111,224,.5)}
+#btnS{width:62px;height:62px;right:calc(100px + env(safe-area-inset-right,0px));bottom:calc(106px + env(safe-area-inset-bottom,0px));background:rgba(240,138,28,.5)}
+#btnP{position:absolute;pointer-events:auto;left:50%;top:calc(6px + env(safe-area-inset-top,0px));transform:translateX(-50%);
+  width:40px;height:30px;border-radius:8px;border:2px solid var(--btn-edge);background:var(--btn);
+  color:#fff;font:10px var(--fp);display:flex;align-items:center;justify-content:center}
+body.portrait #btnP{top:66vh}
+@media (prefers-reduced-motion:reduce){.btn.down{transform:none}}
+</style>
+<canvas id="cv" aria-label="Игрално поле"></canvas>
+<div id="ctl" hidden>
+  <div id="stickZone"><div id="stickBase"><div id="knob"></div></div></div>
+  <div id="btnS" class="btn">СПЕЦ</div>
+  <div id="btnB" class="btn">СКОК</div>
+  <div id="btnA" class="btn">УДАР</div>
+  <div id="btnP" role="button" aria-label="Пауза">II</div>
+</div>
+<script>/*GAME*/</script>
