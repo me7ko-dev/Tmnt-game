@@ -7,7 +7,6 @@
 
 - **Играй онлайн (и на телефон):** https://me7ko-dev.github.io/Tmnt-game/
 - **GitHub:** https://github.com/me7ko-dev/Tmnt-game
-- **Папка на компютъра:** `C:\Users\roika\Projects\tmnt-game`
 
 ## Как се пуска
 
