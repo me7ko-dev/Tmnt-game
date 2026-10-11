@@ -1,10 +1,10 @@
-import { chromium } from 'playwright';
+import { launch, PAGE, SHOTS } from './pw.mjs';
 const [lvl = 0, turtle = 1, maxSec = 240, god = 1] = process.argv.slice(2).map(Number);
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+const b = await launch();
 const pg = await b.newPage({ viewport: { width: 960, height: 540 } });
 const errs = [];
 pg.on('pageerror', e => errs.push('pageerror: ' + e.message + ' ' + e.stack));
-await pg.goto('file://' + process.cwd() + '/index.html' + (god ? '#god' : ''));
+await pg.goto(PAGE + (god ? '#god' : ''));
 await pg.waitForTimeout(300);
 await pg.evaluate(([l, t]) => {
   const D = window.__dbg, K = D.keys; let n = 0;
@@ -36,8 +36,8 @@ while ((Date.now() - t0) / 1000 < maxSec) {
   for (const l of st.L) console.log(l);
   if (st.s !== last) console.log(Math.round((Date.now() - t0) / 1000) + 's', st.s); last = st.s;
   if (st.s.startsWith('gameover') || st.s.startsWith('ending') || st.s.startsWith('title')) break;
-  const m = st.s.match(/lvl(\d) .*boss(\d)/); if (m && m[2] !== '0') await pg.screenshot({ path: `shots/boss-${m[1]}.png` });
+  const m = st.s.match(/lvl(\d) .*boss(\d)/); if (m && m[2] !== '0') await pg.screenshot({ path: `${SHOTS}/boss-${m[1]}.png` });
 }
-await pg.screenshot({ path: 'shots/final.png' });
+await pg.screenshot({ path: `${SHOTS}/final.png` });
 console.log('ERRORS', errs.slice(0, 5));
 await b.close();

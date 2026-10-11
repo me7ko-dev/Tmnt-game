@@ -17,6 +17,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);overflow:hi
   -webkit-tap-highlight-color:transparent;overscroll-behavior:none}
 #cv{position:fixed;left:0;top:0;display:block;background:#000}
 #ctl{position:fixed;inset:0;pointer-events:none}
+#rot{position:fixed;left:0;right:0;text-align:center;font:9px var(--fp);color:#9ab09a;pointer-events:none;line-height:1.6;padding:0 16px}
+#rot[hidden]{display:none}
 #ctl[hidden]{display:none!important}
 #stickZone{position:absolute;left:0;bottom:0;width:48%;height:72%;pointer-events:auto;touch-action:none}
 #stickBase{position:fixed;width:112px;height:112px;margin:-56px 0 0 -56px;border-radius:50%;
@@ -37,9 +39,12 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);overflow:hi
   width:40px;height:30px;border-radius:8px;border:2px solid var(--btn-edge);background:var(--btn);
   color:#fff;font:10px var(--fp);display:flex;align-items:center;justify-content:center}
 body.portrait #btnP{top:66vh}
-@media (prefers-reduced-motion:reduce){.btn.down{transform:none}}
+#btnS.super{background:rgba(255,190,40,.75);border-color:#fff6a0;opacity:1;animation:pulse .6s ease-in-out infinite alternate}
+@keyframes pulse{from{box-shadow:0 0 6px 2px rgba(255,210,63,.5)}to{box-shadow:0 0 22px 8px rgba(255,210,63,.9)}}
+@media (prefers-reduced-motion:reduce){.btn.down{transform:none}#btnS.super{animation:none}}
 </style>
 <canvas id="cv" aria-label="Игрално поле"></canvas>
+<div id="rot" hidden>↻ Завърти телефона хоризонтално</div>
 <div id="ctl" hidden>
   <div id="stickZone"><div id="stickBase"><div id="knob"></div></div></div>
   <div id="btnS" class="btn">СПЕЦ</div>

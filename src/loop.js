@@ -16,5 +16,18 @@ function frame(now) {
 if (document.fonts && document.fonts.load) { document.fonts.load('10px "Press Start 2P"').catch(() => { }); document.fonts.load('20px "Russo One"').catch(() => { }); }
 setScene('title');
 requestAnimationFrame(frame);
-window.__dbg = { startGame, startLevel, spawnBoss, spawnEnemy, get P() { return P; }, get ents() { return ents; }, inp, keys, LEVELS };
+// икона на приложението (за инсталиране на телефона), рисувана със същия код като героите
+function makeIcon(n, pad = 1) {
+  const c = document.createElement('canvas'); c.width = c.height = n;
+  const keep = g; g = c.getContext('2d');
+  try {
+    g.setTransform(n / 64, 0, 0, n / 64, 0, 0);
+    g.fillStyle = vgrad(0, 64, [[0, '#2a5a20'], [1, '#0b0f0c']]); g.fillRect(0, 0, 64, 64);
+    add(() => glow(32, 30, 34, '#8ef05a', 0.45));
+    const k = 2.6 * pad; g.translate(32 + 3 * k, 33); g.scale(k, k);
+    headTurtle(0, 0, 7, colorsFor({ pl: true, t: TURTLES[0] }), 0, 'calm', 'leo', 0);
+  } finally { g = keep; }
+  return c.toDataURL('image/png');
+}
+window.__dbg = { render, cv, makeIcon,  startGame, startLevel, spawnBoss, spawnEnemy, lob, startSuper, get P() { return P; }, get ents() { return ents; }, get projs() { return projs; }, get items() { return items; }, inp, keys, LEVELS, TURTLES, colorsFor };
 })();

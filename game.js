@@ -34,7 +34,9 @@ function resize() {
   SC = s;
   cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
   cv.style.left = Math.floor((vw - cw) / 2) + 'px';
-  cv.style.top = (portrait ? Math.max(8, Math.floor(vh * 0.05)) : Math.floor((vh - ch) / 2)) + 'px';
+  const top = portrait ? Math.max(8, Math.floor((vh * 0.6 - ch) / 2)) : Math.floor((vh - ch) / 2);
+  cv.style.top = top + 'px';
+  const rot = document.getElementById('rot'); if (rot) { rot.hidden = !portrait; rot.style.top = (top + ch + 14) + 'px'; }
   cv.width = Math.round(cw * DPR); cv.height = Math.round(ch * DPR);
   document.body.classList.toggle('portrait', portrait);
 }
@@ -96,6 +98,13 @@ const Snd = {
         case 'roar': this.osc('sawtooth', 160, 70, 0.6, 0.22); this.nz(0.6, 0.3, 600, 200, 'lowpass'); break;
         case 'die': this.osc('square', 400, 50, 0.6, 0.18); break;
         case 'clear': [0, 4, 7, 12, 7, 12].forEach((s, i) => this.osc('square', 440 * 2 ** (s / 12), 440 * 2 ** (s / 12), 0.14, 0.12, i * 0.12)); break;
+        case 'super': this.osc('sawtooth', 110, 880, 0.5, 0.18); this.osc('square', 220, 1760, 0.45, 0.08, 0.05); this.nz(0.6, 0.35, 300, 6000); break;
+        case 'ready': [7, 12, 19].forEach((s, i) => this.osc('triangle', 523 * 2 ** (s / 12), 523 * 2 ** (s / 12), 0.1, 0.16, i * 0.05)); break;
+        case 'throw': this.nz(0.18, 0.3, 600, 2400); this.osc('square', 300, 120, 0.15, 0.1); break;
+        case 'armor': this.osc('square', 1400, 900, 0.06, 0.08); this.nz(0.05, 0.25, 5000, 3000, 'highpass'); break;
+        case 'fuse': this.nz(0.25, 0.12, 6000, 3000, 'highpass'); break;
+        case 'power': [0, 4, 7, 12, 16, 19, 24].forEach((s, i) => this.osc('square', 392 * 2 ** (s / 12), 392 * 2 ** (s / 12), 0.07, 0.11, i * 0.045)); break;
+        case 'combo': this.osc('triangle', 1046, 1568, 0.12, 0.14); break;
       }
     } catch (e) { }
   }
@@ -145,20 +154,30 @@ const Music = {
 };
 
 // ---------------------------------------------------------------- данни
+// body: разлики в тялото спрямо общия модел; face: характер на лицето; sup: името на супер удара
 const TURTLES = [
-  { id: 'leo', name: 'ЛЕО', color: '#2f6fe0', weapon: 'katana', spd: 1.55, dmg: [7, 7, 12], atkT: 17, reach: 38, desc: 'Катани', stat: [3, 3, 3] },
-  { id: 'raf', name: 'РАФ', color: '#e0342f', weapon: 'sai', spd: 1.6, dmg: [9, 9, 14], atkT: 14, reach: 30, desc: 'Саи', stat: [5, 3, 1] },
-  { id: 'don', name: 'ДОН', color: '#8a45d6', weapon: 'bo', spd: 1.42, dmg: [7, 7, 12], atkT: 20, reach: 50, desc: 'Бо тояга', stat: [3, 2, 5] },
-  { id: 'mik', name: 'МАЙК', color: '#f08a1c', weapon: 'nunchaku', spd: 1.72, dmg: [6, 6, 11], atkT: 12, reach: 33, desc: 'Нунчаку', stat: [2, 5, 2] }
+  { id: 'leo', name: 'ЛЕО', color: '#2f6fe0', weapon: 'katana', spd: 1.55, dmg: [7, 7, 12], atkT: 17, reach: 38, desc: 'Катани', stat: [3, 3, 3], skin: '#4ea437', face: 'calm', body: {}, sup: 'ВИХРЕН УДАР' },
+  { id: 'raf', name: 'РАФ', color: '#e0342f', weapon: 'sai', spd: 1.6, dmg: [9, 9, 14], atkT: 14, reach: 30, desc: 'Саи', stat: [5, 3, 1], skin: '#3f9238', face: 'scowl', body: { bodyW: 17, torso: 14.4, ar: [3.4, 2.9, 2.3], lr: [3.9, 3.2, 2.5], hand: 2.9 }, sup: 'ЗЕМЕТРЕСЕНИЕ' },
+  { id: 'don', name: 'ДОН', color: '#8a45d6', weapon: 'bo', spd: 1.42, dmg: [7, 7, 12], atkT: 20, reach: 50, desc: 'Бо тояга', stat: [3, 2, 5], skin: '#6aa23c', face: 'smart', body: { leg: 8.9, torso: 14.8, bodyW: 14.6, ar: [2.8, 2.4, 2.0], lr: [3.4, 2.8, 2.3] }, sup: 'БО ТОРНАДО' },
+  { id: 'mik', name: 'МАЙК', color: '#f08a1c', weapon: 'nunchaku', spd: 1.72, dmg: [6, 6, 11], atkT: 12, reach: 33, desc: 'Нунчаку', stat: [2, 5, 2], skin: '#79b83d', face: 'grin', body: { leg: 7.6, torso: 13.6, bodyW: 15.6, headR: 7.7 }, sup: 'НУНЧАКУ БУРЯ' }
 ];
+// armor: не се спира от обикновени удари; sc: размер; lob: хвърля бомби по дъга
 const EDEF = {
   n: { style: 'ninja', suit: '#6b3fa0', hp: 22, spd: 0.9, dmg: 6, reach: 24, windup: 22, score: 100 },
-  o: { style: 'ninja', suit: '#d0622a', hp: 26, spd: 1.25, dmg: 7, reach: 24, windup: 16, score: 150 },
+  o: { style: 'ninja', suit: '#d0622a', hp: 26, spd: 1.25, dmg: 7, reach: 24, windup: 16, leap: true, score: 150 },
   w: { style: 'ninja', suit: '#d8d8e0', mask: '#b02a2a', hp: 20, spd: 0.95, dmg: 5, reach: 24, windup: 18, ranged: { type: 'star', cd: 120 }, score: 150 },
-  y: { style: 'ninja', suit: '#d6b928', hp: 34, spd: 1.0, dmg: 9, reach: 34, windup: 20, weapon: 'sword', dash: true, score: 200 },
+  y: { style: 'ninja', suit: '#d6b928', hp: 34, spd: 1.0, dmg: 9, reach: 34, windup: 20, weapon: 'sword', dash: true, plate: true, score: 200 },
+  k: { style: 'ninja', suit: '#a8283a', mask: '#241a22', hp: 28, spd: 1.15, dmg: 8, reach: 54, windup: 20, weapon: 'kusari', hair: true, score: 250 },
+  b: { style: 'ninja', suit: '#3f7a4a', mask: '#e0b830', hp: 22, spd: 0.95, dmg: 10, reach: 24, windup: 20, ranged: { type: 'bomb', cd: 170 }, bag: true, score: 200 },
+  h: { style: 'brute', suit: '#4a3a5e', hp: 72, spd: 0.62, dmg: 13, reach: 36, windup: 30, weapon: 'club', armor: true, sc: 1.16, score: 400 },
   r: { style: 'robot', hp: 10, spd: 1.35, dmg: 4, reach: 16, windup: 16, leap: true, score: 80 },
   s: { style: 'soldier', suit: '#7d8794', hp: 40, spd: 0.8, dmg: 9, reach: 26, windup: 24, weapon: 'gun', ranged: { type: 'laser', cd: 140 }, score: 250 }
 };
+const DIFF = [
+  { name: 'ЛЕСНО', dmg: 0.6, wu: 1.25, lives: 4, boss: 0.8, haz: 1.4 },
+  { name: 'СРЕДНО', dmg: 1, wu: 1, lives: 3, boss: 1, haz: 1 },
+  { name: 'ТРУДНО', dmg: 1.35, wu: 0.82, lives: 2, boss: 1.2, haz: 0.8 }
+];
 const BDEF = {
   rhino: { name: 'РОГАЧ', hp: 250, spd: 1.0, scale: 1.35, dmg: 12, reach: 34, weapon: 'biggun', shot: 'bullet', minion: 'n', moves: { melee: 3, charge: 2, shoot: 2 } },
   boar: { name: 'ГЛИГАНА', hp: 270, spd: 1.1, scale: 1.3, dmg: 12, reach: 32, shot: 'bullet', minion: 'o', moves: { melee: 3, charge: 2, slam: 2, summon: 1 } },
@@ -171,15 +190,15 @@ const LEVELS = [
   { name: 'ГОРЯЩАТА СГРАДА', sub: 'Спаси репортерката от пожара', theme: 'fire', len: 2600, hazard: 'fire', maxAlive: 3, maxEng: 2, prop: 'crate',
     waves: [[180, 'nnn'], [620, 'nnnw'], [1080, 'nnwnn'], [1540, 'onwnn'], [2000, 'nonwn']], boss: ['rhino'] },
   { name: 'УЛИЦИТЕ', sub: 'Нощна гонка из града', theme: 'street', len: 3000, hazard: 'car', maxAlive: 3, maxEng: 2, prop: 'barrel',
-    waves: [[180, 'nno'], [600, 'nnwo'], [1040, 'onwno'], [1480, 'nnoww'], [1920, 'oonnw'], [2360, 'nwono']], boss: ['boar'] },
+    waves: [[180, 'nno'], [600, 'nnwo'], [1040, 'onwno'], [1480, 'nnokw'], [1920, 'oonnw'], [2360, 'nwkno']], boss: ['boar'] },
   { name: 'КАНАЛИТЕ', sub: 'Роботите-хапльовци нападат', theme: 'sewer', len: 3000, hazard: 'drip', maxAlive: 4, maxEng: 2, prop: 'barrel',
-    waves: [[180, 'rrr'], [600, 'nnrr'], [1040, 'ownrr'], [1480, 'rrrrn'], [1920, 'oonwr'], [2360, 'nrrwor']], boss: ['fly'] },
+    waves: [[180, 'rrr'], [600, 'nnrr'], [1040, 'ownrr'], [1480, 'rrbrn'], [1920, 'oonkr'], [2360, 'nrrwbr']], boss: ['fly'] },
   { name: 'СТРОЕЖЪТ', sub: 'Опасност отгоре', theme: 'site', len: 3200, hazard: 'beam', maxAlive: 4, maxEng: 3, prop: 'crate',
-    waves: [[180, 'nny'], [620, 'onsy'], [1080, 'ywnno'], [1540, 'ssnr'], [2000, 'yyowr'], [2500, 'soynw']], boss: ['samurai'] },
+    waves: [[180, 'nny'], [620, 'onsy'], [1080, 'ywnbo'], [1540, 'ssnh'], [2000, 'yyowr'], [2500, 'sokhw']], boss: ['samurai'] },
   { name: 'ПРИСТАНИЩЕТО', sub: 'Двамата мутанти се завръщат', theme: 'docks', len: 3200, hazard: 'crate', maxAlive: 4, maxEng: 3, prop: 'crate',
-    waves: [[180, 'noyw'], [620, 'ssoyn'], [1080, 'rrrnoy'], [1540, 'ywsno'], [2000, 'yysoow'], [2500, 'nsyrwo']], boss: ['rhino', 'boar'] },
+    waves: [[180, 'noyw'], [620, 'ssokn'], [1080, 'rrrnoy'], [1540, 'ywhbo'], [2000, 'yysoow'], [2500, 'nsykhw']], boss: ['rhino', 'boar'] },
   { name: 'ТЕХНО-КРЕПОСТТА', sub: 'Последната битка', theme: 'tech', len: 3400, hazard: 'laser', maxAlive: 4, maxEng: 3, prop: 'barrel',
-    waves: [[180, 'ssy'], [620, 'yyoow'], [1080, 'sssr'], [1540, 'ywyws'], [2000, 'rrrsyo'], [2500, 'yyssow'], [2900, 'soyws']], boss: ['blade'], boss2: ['brain'] }
+    waves: [[180, 'ssy'], [620, 'yykow'], [1080, 'sssr'], [1540, 'ywhws'], [2000, 'rrrsyb'], [2500, 'yyhsbk'], [2900, 'sohwk']], boss: ['blade'], boss2: ['brain'] }
 ];
 
 // ---------------------------------------------------------------- вход
@@ -269,8 +288,12 @@ cv.addEventListener('pointerdown', e => {
 const G = {
   scene: 'title', sel: 0, lvl: 0, startLvl: 0, cam: 0, lock: null, waveI: 0, wave: null, spawnT: 0, bossStage: 0, bosses: [], b2T: 0,
   t: 0, shake: 0, stop: 0, score: 0, lives: 2, turtle: 0, hazT: 300, goT: 0, clearT: 0, introT: 0, bonus: 0, conts: 0,
-  flash: 0, god: location.hash === '#god', done: store.get('done', []), best: store.get('best', 0)
+  flash: 0, god: location.hash === '#god', done: store.get('done', []), best: store.get('best', 0),
+  diff: store.get('diff', 1), vib: store.get('vib', true), chain: 0, chainT: 0, cut: null, tint: 0,
+  stats: { kills: 0, maxChain: 0, dmg: 0, t: 0 }
 };
+const D_ = () => DIFF[G.diff] || DIFF[1];
+function buzz(ms) { if (G.vib && navigator.vibrate) try { navigator.vibrate(ms); } catch (e) { } }
 let P = null, ents = [], projs = [], items = [], props = [], parts = [], hazards = [], texts = [];
 window.__G = G;
 
@@ -283,11 +306,16 @@ function togglePause() {
   if (G.scene === 'play') { setScene('paused'); Music.stop(); }
   else if (G.scene === 'paused') { setScene('play'); Music.start(G.bossStage === 1 || G.bossStage === 3 ? 'boss' : 'l' + G.lvl); }
 }
+// бутон „Инсталирай“ (Android/Chrome) – играта става приложение на телефона
+let installEvt = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+addEventListener('appinstalled', () => { installEvt = null; });
+function installApp() { const ev = installEvt; if (!ev) return; installEvt = null; try { ev.prompt(); } catch (e) { } }
 let wakeLock = null;
 function keepAwake() { try { if (navigator.wakeLock && !wakeLock) navigator.wakeLock.request('screen').then(w => { wakeLock = w; w.addEventListener('release', () => { wakeLock = null; }); }).catch(() => { }); } catch (e) { } }
 
 function colorsFor(e) {
-  if (e.pl) return { skin: '#55a83a', shell: '#7a5226', plas: '#e6c35c', pad: '#7d4f24', band: e.t.color, belt: '#6b4220', dual: e.t.weapon !== 'bo', weapon: e.t.weapon, leg: '#55a83a', arm: '#55a83a' };
+  if (e.pl) { const s = e.t.skin; return { skin: s, shell: '#7a5226', plas: '#e6c35c', pad: '#7d4f24', band: e.t.color, belt: '#6b4220', dual: e.t.weapon !== 'bo', weapon: e.t.weapon, leg: s, arm: s }; }
   if (e.boss) {
     const B = {
       rhino: { skin: '#8c949e', leg: '#3e5d7a', arm: '#8c949e', torso: '#5b3a1d', acc: '#c9a33a' },
@@ -302,8 +330,8 @@ function colorsFor(e) {
   const d = e.def, s = d.suit || '#777777';
   return { suit: s, leg: s, arm: s, torso: s, mask: d.mask || '#1c1622', weapon: d.weapon };
 }
-function makePlayer(ti) {
-  const p = { pl: true, t: TURTLES[ti], x: G.cam + 70, y: 214, z: 0, vx: 0, vz: 0, face: 1, state: 'idle', st: 0, anim: 0, hp: 100, inv: 60, combo: 0, comboT: 0, queued: false, hit: new Set(), jk: false, hw: 10, jvx: 0, jvy: 0 };
+function makePlayer(ti, pow = 0) {
+  const p = { pl: true, t: TURTLES[ti], x: G.cam + 70, y: 214, z: 0, vx: 0, vz: 0, face: 1, state: 'idle', st: 0, anim: 0, hp: 100, inv: 60, combo: 0, comboT: 0, queued: false, hit: new Set(), jk: false, hw: 10, jvx: 0, jvy: 0, pow, powT: 0, held: null };
   p.C = colorsFor(p); return p;
 }
 
@@ -327,6 +355,10 @@ function physics(e) {
 }
 function onLand(e, v) {
   if (e.state === 'down' || e.state === 'dying') {
+    if (e.thrown) {
+      e.thrown = false; e.hp -= 14; e.hpT = 100; e.flash = 8; shake(5); G.stop = Math.max(G.stop, 4); Snd.play('hit2'); buzz(25);
+      dust(e.x, e.y, 9); spark(e.x, e.y, 8, 8, '#ffe0a0'); if (e.hp <= 0) onKill(e);
+    }
     if (v < -2.6) { e.vz = -v * 0.32; e.z = 0.1; dust(e.x, e.y, 3); Snd.play('land'); }
     return;
   }
@@ -342,22 +374,40 @@ function canHit(att, tgt, reach, back = 6, depth = 13, zr = 30) {
   const dx = (tgt.x - att.x) * att.face;
   return dx > -back - tgt.hw && dx < reach * 1.1 + tgt.hw && Math.abs(tgt.y - att.y) < depth + (tgt.boss ? 5 : 0) && Math.abs(tgt.z - att.z) < zr;
 }
-const hittable = e => !e.ghost && e.hp > 0 && !['down', 'getup', 'dead', 'dying', 'enter', 'drop'].includes(e.state);
-function playerStrike(p, reach, dmg, knock, around) {
+const hittable = e => !e.ghost && e.hp > 0 && !['down', 'getup', 'dead', 'dying', 'enter', 'drop', 'held'].includes(e.state);
+function playerStrike(p, reach, dmg, knock, around, depth = 16) {
+  let n = 0;
   for (const e of ents) {
     if (!hittable(e) || p.hit.has(e)) continue;
-    const ok = around ? (Math.abs(e.x - p.x) < reach + e.hw && Math.abs(e.y - p.y) < 16 && Math.abs(e.z - p.z) < 34) : canHit(p, e, reach);
-    if (ok) { p.hit.add(e); hurtEnemy(e, dmg, knock, e.x >= p.x ? 1 : -1); G.score += 10; }
+    const ok = around ? (Math.abs(e.x - p.x) < reach + e.hw && Math.abs(e.y - p.y) < depth && Math.abs(e.z - p.z) < 34 + (e.boss ? 20 : 0)) : canHit(p, e, reach);
+    if (ok) { p.hit.add(e); hurtEnemy(e, dmg, knock, e.x >= p.x ? 1 : -1); G.score += 10; n++; }
   }
   for (const o of props) {
     if (o.broken || p.hit.has(o)) continue;
-    const ok = around ? Math.abs(o.x - p.x) < reach + o.hw && Math.abs(o.y - p.y) < 16 : canHit(p, o, reach, 6, 14, 40);
-    if (ok) { p.hit.add(o); hitProp(o); }
+    const ok = around ? Math.abs(o.x - p.x) < reach + o.hw && Math.abs(o.y - p.y) < depth : canHit(p, o, reach, 6, 14, 40);
+    if (ok) { p.hit.add(o); hitProp(o); if (p.state !== 'super') p.pow = Math.min(100, p.pow + 2); }
   }
+  return n;
+}
+function onKill(e) {
+  if (e.counted) return; e.counted = true;
+  G.score += e.def.score; G.stats.kills++; addText(e.x, e.y, 46, '+' + e.def.score);
+}
+// поредица от удари без да те ударят – дава точки и пълни метъра за супер удар
+function chainHit() {
+  G.chain++; G.chainT = 110; if (G.chain > G.stats.maxChain) G.stats.maxChain = G.chain;
+  if (G.chain % 10 === 0) Snd.play('combo');
+  if (P && P.state !== 'super') { const was = P.pow; P.pow = Math.min(100, P.pow + 4); if (was < 100 && P.pow >= 100) { Snd.play('ready'); addText(P.x, P.y, 62, 'СУПЕР!', '#ffd23f'); } }
 }
 function hurtEnemy(e, dmg, knock, dir, quiet) {
-  e.hp -= dmg; e.flash = 8;
-  if (!quiet) { G.stop = Math.max(G.stop, knock ? 5 : 3); Snd.play(knock ? 'hit2' : 'hit'); shake(knock ? 3 : 1.5); }
+  if (!quiet && P && P.powT > 0) dmg = Math.round(dmg * 1.5);
+  e.hp -= dmg; e.flash = 8; e.hpT = 110;
+  if (!quiet) { G.stop = Math.max(G.stop, knock ? 5 : 3); Snd.play(knock ? 'hit2' : 'hit'); shake(knock ? 3 : 1.5); chainHit(); }
+  // бронираните не се спират от обикновени удари – трябва трети удар от комбото, ритник или супер
+  if (!e.boss && e.def.armor && !knock && e.hp > 0) {
+    spark(e.x - dir * 6, e.y, e.z + 24 * e.sc, 4, '#a8d8ff'); Snd.play('armor'); e.x += dir * 1.2; e.armorT = 10;
+    return;
+  }
   spark(e.x - dir * 4, e.y, e.z + (e.boss ? 26 * e.sc : 20), knock ? 9 : 5);
   if (e.boss) {
     if (e.hp <= 0) { killBoss(e); return; }
@@ -366,28 +416,43 @@ function hurtEnemy(e, dmg, knock, dir, quiet) {
   }
   if (e.hp <= 0 || knock) {
     e.state = 'down'; e.st = 0; e.vx = dir * (knock ? 3.2 : 2.2); e.vz = knock ? 3.4 : 2.6; e.z = Math.max(e.z, 0.1); e.face = -dir;
-    if (e.hp <= 0) { G.score += e.def.score; addText(e.x, e.y, 46, '+' + e.def.score); }
+    if (e.hp <= 0) onKill(e);
   } else {
     e.state = 'hurt'; e.st = 0; e.vx = dir * 1.2; e.face = -dir; if (e.z > 0) e.vz = Math.max(e.vz, 1.2);
   }
 }
 function hurtPlayer(p, dmg, knock, dir) {
-  if (p.inv > 0 || ['down', 'getup', 'special', 'dead', 'respawn'].includes(p.state)) return false;
+  if (p.inv > 0 || p.powT > 0 || ['down', 'getup', 'special', 'super', 'throw', 'dead', 'respawn'].includes(p.state)) return false;
+  dmg = Math.round(dmg * D_().dmg);
   if (G.god) dmg = 0;
-  p.hp = Math.max(0, p.hp - dmg); p.flash = 8;
-  Snd.play('hurt'); shake(knock ? 4 : 2); G.stop = Math.max(G.stop, 4); spark(p.x, p.y, p.z + 22, 6, '#ff7a50');
+  p.hp = Math.max(0, p.hp - dmg); p.flash = 8; G.stats.dmg += dmg;
+  Snd.play('hurt'); shake(knock ? 4 : 2); G.stop = Math.max(G.stop, 4); spark(p.x, p.y, p.z + 22, 6, '#ff7a50'); buzz(knock ? 45 : 25);
+  if (p.held) dropHeld(p);
   if (p.hp <= 0 || knock) { p.state = 'down'; p.st = 0; p.vx = dir * 2.6; p.vz = 3.2; p.z = Math.max(p.z, 0.1); p.face = -dir; }
   else { p.state = 'hurt'; p.st = 0; p.vx = dir * 1.4; p.face = -dir; }
-  p.combo = 0; p.jk = false; return true;
+  p.combo = 0; p.jk = false; p.pow = Math.min(100, p.pow + 5); G.chain = 0; G.chainT = 0; return true;
 }
 function strikeOnce(e, reach, dmg, knock) {
   if (e.hitDone || !P) return;
   if (canHit(e, P, reach) && hurtPlayer(P, dmg, knock, e.face)) e.hitDone = true;
 }
-const PROJ = { star: [3.6, 5], laser: [5, 8], bullet: [4.6, 6], acid: [3, 7], knife: [4.8, 8], blade: [4, 8], orb: [2.6, 10] };
+const PROJ = { star: [3.6, 5], laser: [5, 8], bullet: [4.6, 6], acid: [3, 7], knife: [4.8, 8], blade: [4, 8], orb: [2.6, 10], bomb: [0, 12] };
 function shoot(x, y, z, face, type, vy = 0) {
   const [sp, dmg] = PROJ[type];
   projs.push({ type, x, y, z, vx: face * sp, vy, life: 240, dmg, t: 0 });
+}
+// бомба по дъга: каца точно там, където е бил играчът, после избухва
+function lob(x, y, z, tx, ty) {
+  const T = 52, gb = GRAV * 0.55;
+  projs.push({ type: 'bomb', x, y, z, tx, ty, vx: (tx - x) / T, vy: (ty - y) / T, vz: (0.5 * gb * T * T - z) / T, gb, life: 400, dmg: PROJ.bomb[1], t: 0, fuse: -1 });
+}
+function explode(pr) {
+  Snd.play('boom'); shake(5); buzz(30);
+  for (let i = 0; i < 3; i++) spark(pr.x + rnd(-10, 10), pr.y, rnd(4, 18), 8, i ? '#ffb040' : '#fff0a0');
+  dust(pr.x, pr.y, 10); parts.push({ k: 'ring', x: pr.x, y: pr.y, z: 2, vx: 0, vy: 0, vz: 0, life: 16, max: 16, col: '#ffb040' });
+  const near = e => Math.abs(e.x - pr.x) < 30 && Math.abs(e.y - pr.y) < 14 && e.z < 24;
+  if (P && near(P)) hurtPlayer(P, pr.dmg, true, P.x >= pr.x ? 1 : -1);
+  for (const e of ents) if (!e.boss && hittable(e) && near(e)) hurtEnemy(e, 14, true, e.x >= pr.x ? 1 : -1, true);
 }
 
 // ---------------------------------------------------------------- играч
@@ -395,14 +460,35 @@ function startAttack(p) {
   const cont = (p.state === 'attack' || p.comboT > 0) && p.combo < 3;
   p.combo = cont ? p.combo + 1 : 1; p.state = 'attack'; p.st = 0; p.queued = false; p.hit.clear();
 }
+// враг плътно до теб + джойстик в обратна посока + УДАР = хвърляне през рамо натам, накъдето държиш
+function tryThrow(p, mx) {
+  if (Math.abs(mx) < 0.4) return false;
+  const dir = sgn(mx); let best = null, bd = 1e9;
+  for (const e of ents) {
+    if (e.boss || !hittable(e) || e.z > 6 || e.def.armor) continue;
+    const dx = (p.x - e.x) * dir, dy = Math.abs(e.y - p.y);
+    if (dx > -3 && dx < 26 + e.hw && dy < 11 && dx + dy < bd) { best = e; bd = dx + dy; }
+  }
+  if (!best) return false;
+  p.face = dir; p.state = 'throw'; p.st = 0; p.held = best; p.combo = 0;
+  best.state = 'held'; best.st = 0; best.face = dir; best.vx = 0; best.vz = 0; Snd.play('throw');
+  return true;
+}
+function dropHeld(p) { const e = p.held; p.held = null; if (e && e.state === 'held') { e.state = 'down'; e.st = 20; e.vz = 1; e.z = Math.max(e.z, 0.1); } }
 function startSpecial(p) {
   p.hp = Math.max(1, p.hp - Math.min(6, p.hp - 1));
   p.state = 'special'; p.st = 0; p.hit.clear(); Snd.play('special'); G.flash = 4;
 }
+function startSuper(p) {
+  p.pow = 0; p.state = 'super'; p.st = 0; p.hit.clear(); p.inv = Math.max(p.inv, 10);
+  Snd.play('super'); G.flash = 8; G.stop = 14; G.tint = 60; shake(5); buzz(70);
+  G.cut = { t: 56, T: p.t };
+}
 function updPlayer(p) {
   p.st++; p.anim++; if (p.inv > 0) p.inv--; if (p.flash > 0) p.flash--;
+  if (p.powT > 0) { p.powT--; if (p.powT % 4 === 0) parts.push({ k: 'mote', x: p.x + rnd(-8, 8), y: p.y, z: p.z + rnd(4, 34), vx: 0, vy: 0, vz: 0.8, life: 16, max: 16, col: ['#ffd23f', '#ff7040', '#7dff7d', '#60c0ff'][(p.powT >> 2) % 4], sz: 1.6 }); }
   if (p.comboT > 0) p.comboT--; else if (p.state !== 'attack') p.combo = 0;
-  const T = p.t, sp = T.spd;
+  const T = p.t, sp = T.spd * (p.powT > 0 ? 1.15 : 1);
   physics(p);
   switch (p.state) {
     case 'idle': case 'walk': {
@@ -410,11 +496,25 @@ function updPlayer(p) {
       p.x += mx * sp; p.y += my * sp * 0.62;
       if (Math.abs(mx) > 0.2) p.face = mx > 0 ? 1 : -1;
       p.state = (Math.abs(mx) > 0.15 || Math.abs(my) > 0.15) ? 'walk' : 'idle';
-      if (take('s')) startSpecial(p);
-      else if (take('a')) startAttack(p);
+      if (take('s')) { if (p.pow >= 100) startSuper(p); else startSpecial(p); }
+      else if (take('a')) { if (!tryThrow(p, mx)) startAttack(p); }
       else if (take('b')) { p.state = 'jump'; p.st = 0; p.vz = 5.6; p.z = 0.1; p.jk = false; p.jvx = mx * sp * 1.05; p.jvy = my * sp * 0.45; Snd.play('jump'); }
       break;
     }
+    case 'throw': {
+      const e = p.held;
+      if (!e || e.state !== 'held') { p.held = null; if (p.st > 4) { p.state = 'idle'; p.st = 0; } break; }
+      // вдига врага над главата и го хвърля напред (вече сме обърнати)
+      const k = clamp(p.st / 14, 0, 1);
+      e.x = p.x - p.face * lerp(14, -6, k); e.y = p.y + 0.5; e.z = lerp(4, 34, k);
+      if (p.st === 16) {
+        p.held = null; e.state = 'down'; e.st = 0; e.thrown = true; e.x = p.x + p.face * 10; e.z = 30; e.vx = p.face * 4.4; e.vz = 2.6; e.face = -p.face;
+        e.hp -= 4; e.hpT = 110; Snd.play('swing'); shake(2); chainHit();
+      }
+      if (p.st >= 28) { p.state = 'idle'; p.st = 0; }
+      break;
+    }
+    case 'super': doSuper(p); break;
     case 'jump':
       p.x += p.jvx + inp.x * 0.35; p.y += p.jvy;
       if (!p.jk && Math.abs(inp.x) > 0.3) p.face = sgn(inp.x);
@@ -450,8 +550,47 @@ function updPlayer(p) {
   }
   p.y = clamp(p.y, FT, FB); p.x = clamp(p.x, G.cam + 12, G.cam + W - 12);
 }
+// супер ударите – всяка костенурка има свой
+function doSuper(p) {
+  const s = p.st, sp = p.t.spd;
+  const end = n => { if (s >= n) { p.state = 'idle'; p.st = 0; p.inv = Math.max(p.inv, 30); p.z = 0; p.vz = 0; } };
+  switch (p.t.id) {
+    case 'leo': // засилване и вихрен удар през екрана
+      if (s >= 14 && s <= 40) {
+        p.x += p.face * 6.2; p.y += inp.y * 0.9;
+        if (s % 7 === 0) p.hit.clear();
+        playerStrike(p, 24, 11, s >= 33, true, 22);
+        parts.push({ k: 'streak', x: p.x - p.face * 8, y: p.y, z: p.z + 18 + rnd(-8, 8), vx: 0, vy: 0, vz: 0, life: 14, max: 14, col: '#9ad0ff', w: rnd(18, 36) * p.face });
+      }
+      end(56); break;
+    case 'raf': { // скок и удар в земята – вълната поваля всички
+      if (s >= 8 && s <= 30) { p.z = Math.sin((s - 8) / 22 * Math.PI) * 46; p.vz = 0; }
+      if (s === 30) {
+        p.z = 0; shake(11); Snd.play('boom'); buzz(90); G.flash = 6; dust(p.x, p.y, 16);
+        parts.push({ k: 'wave', x: p.x, y: p.y, z: 0, vx: 0, vy: 0, vz: 0, life: 26, max: 26, col: '#ffb060' });
+        for (const e of ents) if (hittable(e) && Math.abs(e.x - p.x) < 210 && e.z < 40) hurtEnemy(e, e.boss ? 30 : 34, true, e.x >= p.x ? 1 : -1);
+        for (const o of props) if (!o.broken && Math.abs(o.x - p.x) < 210) { hitProp(o); if (!o.broken) hitProp(o); }
+      }
+      end(52); break;
+    }
+    case 'don': // вихрушка с бо-то, която се движи с джойстика
+      p.x += inp.x * sp * 0.9; p.y += inp.y * sp * 0.55;
+      if (s % 4 === 0) p.face *= -1;
+      if (s >= 4 && s <= 66) { if (s % 9 === 4) p.hit.clear(); playerStrike(p, 60, s >= 60 ? 14 : 8, s >= 60, true, 26); }
+      if (s % 3 === 0) parts.push({ k: 'dust', x: p.x + rnd(-40, 40), y: p.y + rnd(-6, 6), z: 1, vx: rnd(-1.5, 1.5), vy: 0, vz: 0.4, life: 22, max: 22, col: 'rgba(210,190,255,', sz: rnd(4, 7) });
+      if (s % 8 === 0) Snd.play('swing');
+      end(74); break;
+    case 'mik': // буря от удари с нунчакуто
+      if (s >= 6 && s <= 54) {
+        p.x += p.face * 0.5 + inp.x * 0.4; p.y += inp.y * 0.6;
+        if (s % 5 === 0) { p.hit.clear(); Snd.play('swing'); }
+        playerStrike(p, 46, s >= 50 ? 14 : 5, s >= 50, false);
+      }
+      end(62); break;
+  }
+}
 function loseLife(p) {
-  Snd.play('die');
+  Snd.play('die'); buzz(120);
   if (G.lives <= 0) { p.state = 'dead'; p.st = 0; setScene('gameover'); Music.stop(); return; }
   G.lives--; p.hp = 100; p.state = 'respawn'; p.st = 0; p.z = 190; p.vz = 0; p.x = G.cam + W * 0.3; p.inv = 150; p.combo = 0;
   addText(p.x, p.y, 60, 'ОЩЕ ВЕДНЪЖ!', '#7dff7d');
@@ -460,17 +599,20 @@ function loseLife(p) {
 // ---------------------------------------------------------------- врагове
 function spawnEnemy(code, side, drop) {
   const d = EDEF[code];
-  const e = { def: d, code, x: side < 0 ? G.cam - 26 : G.cam + W + 26, y: rnd(FT + 4, FB - 4), z: 0, vx: 0, vz: 0, face: side < 0 ? 1 : -1, state: 'enter', st: 0, anim: rnd(100) | 0, hp: d.hp, maxhp: d.hp, atkCd: rnd(30, 90), hw: 9, off: rnd(-30, 30), flash: 0, sc: 1 };
+  const sc = d.sc || 1;
+  const e = { def: d, code, x: side < 0 ? G.cam - 26 : G.cam + W + 26, y: rnd(FT + 4, FB - 4), z: 0, vx: 0, vz: 0, face: side < 0 ? 1 : -1, state: 'enter', st: 0, anim: rnd(100) | 0, hp: d.hp, maxhp: d.hp, atkCd: rnd(30, 90), hw: 9 * sc, off: rnd(-30, 30), flash: 0, sc, hpT: 0 };
   if (drop) { e.x = G.cam + rnd(60, W - 60); e.z = 170; e.state = 'drop'; }
   e.C = colorsFor(e); ents.push(e); return e;
 }
 function updEnemy(e, engaged) {
-  e.st++; e.anim++; if (e.flash > 0) e.flash--; e.atkCd--;
+  e.st++; e.anim++; if (e.flash > 0) e.flash--; e.atkCd--; if (e.hpT > 0) e.hpT--; if (e.armorT > 0) e.armorT--;
+  if (e.state === 'held') { if (!P || P.held !== e) { e.state = 'down'; e.st = 20; e.z = Math.max(e.z, 0.1); } return; }
   physics(e);
   const d = e.def, p = P, dx = p.x - e.x, dy = p.y - e.y, adx = Math.abs(dx), ady = Math.abs(dy);
   const pOK = !['down', 'dead', 'respawn', 'getup'].includes(p.state);
   const faceP = () => { if (adx > 2) e.face = dx > 0 ? 1 : -1; };
-  const wu = Math.round(d.windup * (1 - G.lvl * 0.04));
+  const wu = Math.round(d.windup * (1 - G.lvl * 0.04) * D_().wu);
+  const bomb = d.ranged && d.ranged.type === 'bomb';
   switch (e.state) {
     case 'enter': {
       faceP(); const tx = e.x < G.cam + W / 2 ? G.cam + 30 : G.cam + W - 30;
@@ -480,7 +622,7 @@ function updEnemy(e, engaged) {
     }
     case 'drop': break;
     case 'idle': case 'walk': {
-      if (d.ranged && e.atkCd <= 0 && pOK && adx > 50 && adx < 280 && ady < 10) { faceP(); e.state = 'shoot'; e.st = 0; break; }
+      if (d.ranged && e.atkCd <= 0 && pOK && (bomb ? adx > 40 && adx < 230 && ady < 70 : adx > 50 && adx < 280 && ady < 10)) { faceP(); e.state = 'shoot'; e.st = 0; e.tx = p.x; e.ty = p.y; break; }
       if (d.leap && engaged && pOK && e.atkCd <= 0 && adx < 100 && adx > 30 && ady < 12) { faceP(); e.state = 'leapw'; e.st = 0; break; }
       if (d.dash && engaged && pOK && e.atkCd <= 0 && adx > 70 && adx < 170 && ady < 8) { faceP(); e.state = 'dashw'; e.st = 0; break; }
       const side = e.x < p.x ? -1 : 1;
@@ -499,9 +641,18 @@ function updEnemy(e, engaged) {
       break;
     }
     case 'windup': if (e.st >= wu) { e.state = 'attack'; e.st = 0; e.hitDone = false; Snd.play('swing'); } break;
-    case 'attack': if (e.st <= 6) strikeOnce(e, d.reach, d.dmg, false); if (e.st >= 20) { e.state = 'idle'; e.st = 0; e.atkCd = rnd(50, 100) * (1 - G.lvl * 0.05); } break;
+    case 'attack': {
+      const heavy = d.style === 'brute';
+      if (heavy ? e.st >= 4 && e.st <= 9 : e.st <= 6) strikeOnce(e, d.reach, d.dmg, heavy);
+      if (heavy && e.st === 6) { shake(4); dust(e.x + e.face * 30, e.y, 6); Snd.play('boom'); }
+      if (e.st >= (heavy ? 32 : 20)) { e.state = 'idle'; e.st = 0; e.atkCd = rnd(50, 100) * (1 - G.lvl * 0.05) * (heavy ? 1.4 : 1); }
+      break;
+    }
     case 'shoot':
-      if (e.st === 18) { shoot(e.x + e.face * 12, e.y, e.z + 22, e.face, d.ranged.type); Snd.play(d.ranged.type === 'laser' ? 'laser' : 'shoot'); }
+      if (e.st === 18) {
+        if (bomb) { lob(e.x + e.face * 6, e.y, e.z + 30, clamp(p.x + p.vx * 0, G.cam + 10, G.cam + W - 10), p.y); Snd.play('fuse'); }
+        else { shoot(e.x + e.face * 12, e.y, e.z + 22, e.face, d.ranged.type); Snd.play(d.ranged.type === 'laser' ? 'laser' : 'shoot'); }
+      }
       if (e.st >= 34) { e.state = 'idle'; e.st = 0; e.atkCd = d.ranged.cd * rnd(0.7, 1.3); }
       break;
     case 'leapw': if (e.st >= 16) { e.state = 'leap'; e.st = 0; e.vz = 3.6; e.z = 0.1; e.vx = e.face * 2.8; e.hitDone = false; } break;
@@ -510,7 +661,15 @@ function updEnemy(e, engaged) {
     case 'dash': e.x += e.face * 4.6; strikeOnce(e, 20, d.dmg, true); if (e.st >= 24 || e.x < G.cam + 10 || e.x > G.cam + W - 10) { e.state = 'recover'; e.st = 0; } break;
     case 'recover': if (e.st >= 24) { e.state = 'idle'; e.st = 0; e.atkCd = rnd(60, 120); } break;
     case 'hurt': e.x += e.vx; e.vx *= 0.8; if (e.st >= 14) { e.state = 'idle'; e.st = 0; e.atkCd = Math.max(e.atkCd, 16); } break;
-    case 'down': e.x += e.vx; e.vx *= e.z > 0 ? 0.99 : 0.82; if (e.st >= 48 && e.z <= 0) { e.state = e.hp <= 0 ? 'dead' : 'getup'; e.st = 0; } break;
+    case 'down':
+      e.x += e.vx; e.vx *= e.z > 0 ? 0.99 : 0.82;
+      if (e.thrown) { // хвърленият враг поваля всички по пътя си
+        e.thrownHit = e.thrownHit || new Set();
+        for (const o of ents) if (o !== e && !o.boss && hittable(o) && !e.thrownHit.has(o) && Math.abs(o.x - e.x) < 18 && Math.abs(o.y - e.y) < 12) { e.thrownHit.add(o); hurtEnemy(o, 12, true, sgn(e.vx)); }
+        for (const o of props) if (!o.broken && !e.thrownHit.has(o) && Math.abs(o.x - e.x) < 18 && Math.abs(o.y - e.y) < 12) { e.thrownHit.add(o); hitProp(o); }
+      }
+      if (e.st >= 48 && e.z <= 0) { e.state = e.hp <= 0 ? 'dead' : 'getup'; e.st = 0; if (e.hp <= 0) onKill(e); }
+      break;
     case 'getup': if (e.st >= 16) { e.state = 'idle'; e.st = 0; e.atkCd = 30; } break;
     case 'dead': if (e.st >= 36) e.remove = true; break;
   }
@@ -519,7 +678,7 @@ function updEnemy(e, engaged) {
 
 // ---------------------------------------------------------------- шефове
 function spawnBoss(key, k) {
-  const d = BDEF[key], hp = Math.round(d.hp * (G.duo ? 0.65 : 1));
+  const d = BDEF[key], hp = Math.round(d.hp * (G.duo ? 0.65 : 1) * D_().boss);
   const e = { boss: true, key, def: d, sc: d.scale, x: k ? G.cam - 40 : G.cam + W + 40, y: k ? FT + 18 : FB - 22, z: 0, vx: 0, vz: 0, face: k ? 1 : -1, state: 'enter', st: 0, anim: 0, hp, maxhp: hp, hw: 11 * d.scale, think: 60, flinchCd: 0, move: null, phase: 0, flash: 0, fly: key === 'fly' };
   if (key === 'brain') { e.x = G.cam + W * 0.68; e.y = (FT + FB) / 2; e.z = 230; e.state = 'drop'; }
   if (e.fly) e.z = 22;
@@ -702,16 +861,17 @@ function updHazards() {
 }
 
 // ---------------------------------------------------------------- рундове
-function startGame(ti, lvl) { G.turtle = ti; G.score = 0; G.lives = 3; G.conts = 0; startLevel(lvl); }
+function startGame(ti, lvl) { G.turtle = ti; G.score = 0; G.lives = D_().lives; G.conts = 0; P = null; startLevel(lvl); }
 function startLevel(i) {
   const L = LEVELS[i];
   G.lvl = i; ents = []; projs = []; items = []; props = []; parts = []; hazards = []; texts = [];
   G.cam = 0; G.lock = null; G.waveI = 0; G.wave = null; G.bossStage = 0; G.bosses = []; G.duo = L.boss.length > 1;
   G.hazT = 420; G.goT = 0; G.clearT = 0; G.introT = 170; G.b2T = 0; G.shake = 0; G.stop = 0;
-  P = makePlayer(G.turtle);
+  G.chain = 0; G.chainT = 0; G.cut = null; G.tint = 0; G.stats = { kills: 0, maxChain: 0, dmg: 0, t: 0 };
+  P = makePlayer(G.turtle, P ? P.pow : 0);
   L.waves.forEach((w, k) => {
     const x = w[0] + 330 + hash(i * 37 + k) * 60;
-    if (x < L.len - 200) props.push({ type: L.prop, x, y: FT + 8 + hash(i * 91 + k) * (FB - FT - 16), z: 0, hp: 2, hw: 11, shake: 0, drop: k % 3 === 2 ? 'pizza' : 'slice' });
+    if (x < L.len - 200) props.push({ type: L.prop, x, y: FT + 8 + hash(i * 91 + k) * (FB - FT - 16), z: 0, hp: 2, hw: 11, shake: 0, drop: k === 3 ? 'power' : k % 3 === 2 ? 'pizza' : 'slice' });
   });
   setScene('play'); Music.start('l' + i); keepAwake();
 }
@@ -727,6 +887,12 @@ function updPlay() {
   ents = ents.filter(e => !e.remove);
 
   for (const pr of projs) {
+    if (pr.type === 'bomb') {
+      pr.t++; pr.life--;
+      if (pr.fuse < 0) { pr.x += pr.vx; pr.y += pr.vy; pr.vz -= pr.gb; pr.z += pr.vz; if (pr.z <= 0) { pr.z = 0; pr.fuse = 26; Snd.play('land'); } }
+      else if (--pr.fuse <= 0) { pr.life = 0; explode(pr); }
+      continue;
+    }
     pr.t++; pr.x += pr.vx; pr.y += pr.vy; pr.z += (20 - pr.z) * 0.04; pr.life--;
     if (pr.y < FT - 4 || pr.y > FB + 4) pr.life = 0;
     if (Math.abs(pr.x - P.x) < 10 && Math.abs(pr.y - P.y) < 9 && Math.abs(P.z + 20 - pr.z) < 24) {
@@ -739,8 +905,9 @@ function updPlay() {
     if (it.z > 0 || it.vz > 0) { it.vz -= GRAV; it.z += it.vz; if (it.z <= 0) { it.z = 0; it.vz = 0; } }
     it.life--;
     if (P.state !== 'down' && P.state !== 'dead' && P.z < 12 && Math.abs(it.x - P.x) < 15 && Math.abs(it.y - P.y) < 11) {
-      it.life = 0; const heal = it.type === 'pizza' ? 100 : 35; P.hp = Math.min(100, P.hp + heal);
-      Snd.play('pickup'); addText(it.x, it.y, 30, it.type === 'pizza' ? 'ПИЦА!' : '+' + heal, '#7dff7d'); G.score += 100;
+      it.life = 0; G.score += 100;
+      if (it.type === 'power') { P.powT = 540; P.hp = Math.min(100, P.hp + 20); Snd.play('power'); G.flash = 6; buzz(40); addText(it.x, it.y, 34, 'ЯРОСТНА ПИЦА!', '#ffb030'); }
+      else { const heal = it.type === 'pizza' ? 100 : 35; P.hp = Math.min(100, P.hp + heal); Snd.play('pickup'); addText(it.x, it.y, 30, it.type === 'pizza' ? 'ПИЦА!' : '+' + heal, '#7dff7d'); }
     }
   }
   items = items.filter(i => i.life > 0);
@@ -749,12 +916,20 @@ function updPlay() {
   for (const q of parts) {
     q.life--; q.x += q.vx; q.y += q.vy;
     if (q.k === 'dust') { q.z += q.vz; q.sz += 0.15; }
-    else if (q.k !== 'burst') { q.z += q.vz; q.vz -= 0.18; if (q.z < 0) { q.z = 0; q.vz *= -0.4; q.vx *= 0.6; } }
+    else if (q.k === 'mote') q.z += q.vz;
+    else if (q.k === 'spark' || q.k === 'chunk') { q.z += q.vz; q.vz -= 0.18; if (q.z < 0) { q.z = 0; q.vz *= -0.4; q.vx *= 0.6; } }
   }
   parts = parts.filter(q => q.life > 0);
   for (const t of texts) { t.life--; t.z += 0.5; }
   texts = texts.filter(t => t.life > 0);
   updHazards();
+  G.stats.t++;
+  if (G.tint > 0) G.tint--;
+  if (G.chainT > 0 && --G.chainT === 0) {
+    if (G.chain >= 8) { const b = G.chain * 25; G.score += b; addText(P.x, P.y, 70, G.chain + ' УДАРА +' + b, '#ffd23f'); }
+    G.chain = 0;
+  }
+  for (const e of ents) if (e.boss && e.hp > 0 && e.hp < e.maxhp * 0.5 && G.t % 7 === 0) parts.push({ k: 'dust', x: e.x + rnd(-12, 12), y: e.y, z: e.z + rnd(20, 50) * e.sc, vx: rnd(-0.3, 0.3), vy: 0, vz: 0.9, life: 26, max: 26, col: 'rgba(255,110,80,', sz: rnd(3, 5) });
 
   // камера
   let maxCam = L.len - W; if (G.lock !== null) maxCam = Math.min(maxCam, G.lock);
@@ -789,7 +964,7 @@ function updPlay() {
   if (G.bossStage === 4 && ++G.clearT >= 150) finishLevel();
 
   if (L.hazard && G.introT <= 0 && P.state !== 'dead' && G.bossStage !== 4) {
-    if (--G.hazT <= 0) { spawnHazard(L.hazard); G.hazT = rnd(280, 480) * (G.bossStage ? 1.4 : 1); }
+    if (--G.hazT <= 0) { spawnHazard(L.hazard); G.hazT = rnd(280, 480) * (G.bossStage ? 1.4 : 1) * D_().haz; }
   }
 }
 function startBoss(list) {
@@ -798,11 +973,14 @@ function startBoss(list) {
   G.banner = { txt: list.map(b => BDEF[b].name).join(' И '), t: 160 };
   Music.start('boss'); Snd.play('roar');
 }
+// оценка за рунда според понесените щети
+const GRADES = [['S', 30, 5000, '#ffd23f'], ['A', 90, 2500, '#7dff7d'], ['B', 180, 1000, '#60c0ff'], ['C', 1e9, 0, '#c0a0a0']];
 function finishLevel() {
-  G.bonus = P.hp * 20 + G.lives * 500; G.score += G.bonus;
+  const gr = GRADES.find(r => G.stats.dmg <= r[1]);
+  G.grade = gr; G.bonus = P.hp * 20 + G.lives * 500 + gr[2]; G.score += G.bonus;
   if (!G.done.includes(G.lvl)) { G.done.push(G.lvl); store.set('done', G.done); }
   if (G.score > G.best) { G.best = G.score; store.set('best', G.best); }
-  setScene('clear');
+  G.clearAt = G.t; setScene('clear');
 }
 
 // ---------------------------------------------------------------- тикове
@@ -825,11 +1003,21 @@ function tick() {
     if (G.scene === 'ending' || G.scene === 'title') for (const q of parts) { q.life--; q.x += q.vx; q.y += q.vy; }
   }
   if (G.banner && G.banner.t > 0) G.banner.t--;
+  if (G.cut && --G.cut.t <= 0) G.cut = null;
   G.shake *= 0.86; if (G.shake < 0.2) G.shake = 0;
   if (G.flash > 0) G.flash--;
 }
 
 
+// стойката на удара на костенурка: k – кой удар от комбото, q – докъде е стигнал (0..1)
+function atkPose(P, k, q, w) {
+  P.lf = 0.7; P.kf = 0.6; P.lb = -0.6; P.kb = 0.25; P.crouch = 1.5;
+  if (w === 'bo' && k === 1) { P.af = lerp(1.1, 1.57, ease(q * 2)); P.ef = lerp(0.7, 0, ease(q * 2)); P.wf = 1.57; P.ab = 1.2; P.eb = 0.3; P.hx = lerp(0, 4, ease(q * 2)); }
+  else if (k === 1) { P.af = lerp(2.9, 1.1, ease(q * 1.7)); P.ef = 0.25; P.wf = P.af + 0.5; P.lean = lerp(-0.1, 0.15, q); if (q > 0.25 && q < 0.72) P.trail = [2.9 + 0.5, P.wf]; }
+  else if (k === 2) { P.af = lerp(0.6, 2.7, ease(q * 1.7)); P.ef = 0.2; P.wf = P.af + 0.3; P.ab = lerp(-0.4, 1.6, ease(q * 1.7)); P.eb = 0.2; P.wb = P.ab + 0.4; if (q > 0.25 && q < 0.72) P.trail = [0.9, P.wf]; }
+  else if (w === 'bo') { P.af = lerp(3.1, 1.2, ease(q * 1.6)); P.ef = 0.1; P.wf = P.af + 0.1; P.lean = 0.2; if (q > 0.25 && q < 0.72) P.trail = [3.2, P.wf]; }
+  else { P.lf = lerp(0.2, 1.7, ease(q * 2.2)); P.kf = lerp(1.2, 0.05, ease(q * 2.2)); P.lb = -0.3; P.lean = -0.3; P.af = 2.3; P.wf = 2.9; P.ab = -1.4; P.wb = -1.2; if (q > 0.25 && q < 0.72) P.trail = [2.9, 1.2]; }
+}
 function pose(e) {
   const t = e.anim, P = { lf: 0.22, kf: 0.25, lb: -0.22, kb: 0.25, af: 0.55, ef: 1.1, ab: -0.3, eb: 1.0, wf: 2.3, wb: 2.0, lean: 0, crouch: 0, rot: 0, hx: 0, trail: null };
   let st = e.state, q = 0;
@@ -843,20 +1031,14 @@ function pose(e) {
   }
   const walk = (spd, amp) => { const s = Math.sin(t * spd); P.lf = s * amp; P.lb = -s * amp; P.kf = 0.3 + Math.max(0, -s) * 0.8; P.kb = 0.3 + Math.max(0, s) * 0.8; P.af = 0.5 - s * 0.4; P.ab = -0.2 + s * 0.5; P.crouch = Math.abs(Math.cos(t * spd)) * 1.2; };
   switch (st) {
-    case 'idle': P.crouch = 1 + Math.sin(t * 0.08) * 0.6; break;
+    case 'idle': P.crouch = 1 + Math.sin(t * 0.08) * 0.6; P.af = 0.55 + Math.sin(t * 0.08) * 0.06; break;
     case 'walk': case 'enter': walk(0.22, 0.7); break;
     case 'run': walk(0.45, 0.9); P.lean = 0.35; P.af = 1.2; P.wf = 1.6; break;
     case 'attack':
-      if (e.pl) {
-        const d = e.t.atkT + (e.combo === 3 ? 5 : 0); q = e.st / d; const k = e.combo, w = e.t.weapon;
-        P.lf = 0.7; P.kf = 0.6; P.lb = -0.6; P.kb = 0.25; P.crouch = 1.5;
-        if (w === 'bo' && k === 1) { P.af = lerp(1.1, 1.57, ease(q * 2)); P.ef = lerp(0.7, 0, ease(q * 2)); P.wf = 1.57; P.ab = 1.2; P.eb = 0.3; P.hx = lerp(0, 4, ease(q * 2)); }
-        else if (k === 1) { P.af = lerp(2.9, 1.1, ease(q * 1.7)); P.ef = 0.25; P.wf = P.af + 0.5; P.lean = lerp(-0.1, 0.15, q); if (q > 0.25 && q < 0.72) P.trail = [2.9 + 0.5, P.wf]; }
-        else if (k === 2) { P.af = lerp(0.6, 2.7, ease(q * 1.7)); P.ef = 0.2; P.wf = P.af + 0.3; P.ab = lerp(-0.4, 1.6, ease(q * 1.7)); P.eb = 0.2; P.wb = P.ab + 0.4; if (q > 0.25 && q < 0.72) P.trail = [0.9, P.wf]; }
-        else {
-          if (w === 'bo') { P.af = lerp(3.1, 1.2, ease(q * 1.6)); P.ef = 0.1; P.wf = P.af + 0.1; P.lean = 0.2; if (q > 0.25 && q < 0.72) P.trail = [3.2, P.wf]; }
-          else { P.lf = lerp(0.2, 1.7, ease(q * 2.2)); P.kf = lerp(1.2, 0.05, ease(q * 2.2)); P.lb = -0.3; P.lean = -0.3; P.af = 2.3; P.wf = 2.9; P.ab = -1.4; P.wb = -1.2; if (q > 0.25 && q < 0.72) P.trail = [2.9, 1.2]; }
-        }
+      if (e.pl) { const d = e.t.atkT + (e.combo === 3 ? 5 : 0); atkPose(P, e.combo, e.st / d, e.t.weapon); }
+      else if (e.def && e.def.style === 'brute') { // тежък удар отгоре с тоягата
+        q = e.st / 14; P.af = lerp(3.3, 0.9, ease(q * 1.4)); P.ef = 0.05; P.wf = P.af + 0.1; P.ab = P.af - 0.2; P.eb = 0.1; P.wb = P.wf; P.lean = lerp(-0.25, 0.35, ease(q)); P.lf = 0.8; P.kf = 0.7; P.lb = -0.6; P.crouch = lerp(0, 3, ease(q));
+        if (q > 0.2 && q < 0.8) P.trail = [3.4, P.wf];
       } else {
         q = e.boss ? e.st / 28 : e.st / 20;
         P.af = lerp(2.7, 1.4, ease(q * 3)); P.ef = 0.1; P.wf = P.af + 0.3; P.lean = 0.15; P.lf = 0.6; P.kf = 0.4; P.lb = -0.5;
@@ -864,7 +1046,9 @@ function pose(e) {
       }
       break;
     case 'windup': case 'dashw': case 'leapw':
-      P.lean = -0.2; P.af = st === 'dashw' ? -0.6 : 2.8; P.ef = 0.5; P.wf = st === 'dashw' ? -1.1 : 3.1; P.crouch = 2.5; P.lf = 0.5; P.lb = -0.5; P.hx = Math.sin(t * 1.3) * 0.6; break;
+      P.lean = -0.2; P.af = st === 'dashw' ? -0.6 : 2.8; P.ef = 0.5; P.wf = st === 'dashw' ? -1.1 : 3.1; P.crouch = 2.5; P.lf = 0.5; P.lb = -0.5; P.hx = Math.sin(t * 1.3) * 0.6;
+      if (e.def && e.def.style === 'brute') { P.af = 3.4; P.ab = 3.1; P.ef = 0.1; P.eb = 0.1; P.wf = 3.5; P.wb = 3.5; P.lean = -0.3; }
+      break;
     case 'dash': walk(0.5, 0.9); P.lean = 0.45; P.af = 1.6; P.ef = 0; P.wf = 1.6; break;
     case 'recover': P.crouch = 2.5; P.af = 1.2; P.wf = 1.8; break;
     case 'shoot': q = e.st / 34; P.af = q < 0.5 ? 2.8 : 1.4; P.ef = 0.1; P.wf = P.af + 0.2; P.lean = q < 0.5 ? -0.15 : 0.15; break;
@@ -872,10 +1056,34 @@ function pose(e) {
     case 'summon': P.af = 3.0; P.ab = 2.9; P.ef = 0.2; P.eb = 0.2; P.wf = 3.1; P.crouch = Math.sin(t * 0.3) * 1.5 + 1; break;
     case 'jump': case 'respawn': case 'drop': case 'leap':
       if (e.pl && e.jk) { P.lf = 1.65; P.kf = 0.05; P.lb = -0.4; P.kb = 1.4; P.lean = -0.25; P.af = 2.4; P.ab = -1.8; P.wf = 3.0; P.wb = -1.4; }
-      else if (st === 'leap') { P.lf = 1.3; P.kf = 0.1; P.lb = -0.5; P.kb = 1.0; P.af = 1.6; P.ef = 0; }
+      else if (st === 'leap') { P.lf = 1.3; P.kf = 0.1; P.lb = -0.5; P.kb = 1.0; P.af = 1.6; P.ef = 0; P.lean = -0.15; }
       else { P.lf = 0.9; P.kf = 1.7; P.lb = 0.3; P.kb = 1.5; P.af = 2.3; P.ef = 0.6; P.wf = 2.8; P.ab = 2.0; }
       break;
     case 'special': P.af = 1.57; P.ef = 0; P.wf = 1.57; P.ab = -1.57; P.eb = 0; P.wb = -1.57; P.lf = 0.45; P.lb = -0.45; P.crouch = 2; P.trail = [-1.57, 4.71]; break;
+    case 'throw': // вдигане над главата и хвърляне напред
+      q = e.st;
+      if (q < 16) { const k = ease(q / 14); P.af = lerp(1.0, 3.1, k); P.ab = lerp(1.0, 2.9, k); P.ef = 0.3; P.eb = 0.3; P.wf = P.af + 0.4; P.wb = P.ab + 0.4; P.lean = lerp(0.2, -0.3, k); P.crouch = lerp(3, 0.5, k); P.lf = 0.5; P.lb = -0.5; }
+      else { const k = ease((q - 16) / 6); P.af = lerp(3.1, 1.3, k); P.ab = lerp(2.9, 1.1, k); P.ef = 0.1; P.eb = 0.1; P.wf = P.af + 0.3; P.wb = P.ab + 0.3; P.lean = lerp(-0.3, 0.35, k); P.lf = 0.8; P.kf = 0.5; P.lb = -0.6; P.crouch = 2; }
+      break;
+    case 'super': {
+      const s = e.st;
+      switch (e.t.id) {
+        case 'leo':
+          if (s < 14) { P.lean = -0.25; P.af = -0.6; P.ef = 0.5; P.wf = -1.1; P.ab = -0.9; P.wb = -1.3; P.crouch = 3.5; P.lf = 0.7; P.lb = -0.7; P.kf = 0.9; }
+          else if (s <= 40) { walk(0.6, 1.0); P.lean = 0.5; P.af = 1.7; P.ef = 0; P.wf = 1.7; P.ab = 1.3; P.eb = 0; P.wb = 1.4; P.trail = [3.4, 1.4]; }
+          else { P.crouch = 3; P.af = 2.4; P.wf = 3.0; P.ab = -1.2; P.wb = -1.6; P.lf = 0.8; P.lb = -0.8; }
+          break;
+        case 'raf':
+          if (s < 8) { P.crouch = 4; P.af = 1.0; P.ab = 0.8; P.lf = 0.8; P.lb = -0.8; P.kf = 1.0; P.kb = 1.0; }
+          else if (s < 30) { P.af = 3.0; P.ab = 2.9; P.ef = 0.3; P.eb = 0.3; P.wf = 3.3; P.wb = 3.3; P.lf = 0.9; P.kf = 1.6; P.lb = 0.2; P.kb = 1.5; P.lean = -0.15; }
+          else { P.crouch = 5; P.af = 1.3; P.ab = 1.1; P.ef = 0; P.eb = 0; P.wf = 1.4; P.wb = 1.2; P.lf = 1.0; P.kf = 1.2; P.lb = -0.9; P.kb = 1.0; P.lean = 0.35; }
+          break;
+        case 'don': P.af = 1.57; P.ef = 0; P.wf = 1.57; P.ab = -1.57; P.eb = 0; P.wb = -1.57; P.lf = 0.5; P.lb = -0.5; P.crouch = 2.4; P.trail = [-1.57, 4.71]; break;
+        default: atkPose(P, (Math.floor(s / 5) % 2) + 1, (s % 5) / 5, e.t.weapon); if (s >= 48) atkPose(P, 3, (s - 48) / 10, e.t.weapon); P.trail = P.trail || [2.6, 0.9];
+      }
+      break;
+    }
+    case 'held': P.lean = -0.3; P.af = 2.6; P.ef = 0.9; P.ab = 2.3; P.eb = 0.8; P.lf = 0.5; P.kf = 0.9; P.lb = -0.1; P.kb = 1.0; P.hx = -1; P.wf = 2.8; break;
     case 'hurt': P.lean = -0.4; P.af = 2.4; P.ef = 0.8; P.ab = 2.0; P.lf = -0.3; P.lb = 0.3; P.hx = -2; P.wf = 2.8; break;
     case 'down': case 'dead': case 'dying':
       if (e.boss && st === 'dying' && e.st < 30) { P.lean = -0.5; P.af = 2.6; P.ab = 2.2; break; }
@@ -885,10 +1093,10 @@ function pose(e) {
   return P;
 }
 
-
 // ---------------------------------------------------------------- рисуване: помощни
 const TONES = new Map();
 function tone(c, p) { if (!p) return c; const k = c + p; let v = TONES.get(k); if (v === undefined) { v = shade(c, p); TONES.set(k, v); } return v; }
+function brighten(C) { const o = {}; for (const k in C) o[k] = typeof C[k] === 'string' && C[k][0] === '#' ? tone(C[k], 55) : C[k]; return o; }
 function rgba(h, a) { const n = parseInt(h.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
 function circ(x, y, r, fill, stroke = OUT, lw = 1.2) { g.beginPath(); g.arc(x, y, Math.max(0.1, r), 0, TAU); g.fillStyle = fill; g.fill(); if (stroke) { g.lineWidth = lw; g.strokeStyle = stroke; g.stroke(); } }
 function ell(x, y, rx, ry, rot, fill, stroke = OUT, lw = 1.2) { g.beginPath(); g.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), rot, 0, TAU); g.fillStyle = fill; g.fill(); if (stroke) { g.lineWidth = lw; g.strokeStyle = stroke; g.stroke(); } }
@@ -903,9 +1111,20 @@ function txt(s, x, y, size, col, align = 'center', font = FP, lw) {
   if (w > 0) { g.lineJoin = 'round'; g.lineWidth = w; g.strokeStyle = '#0a0a0a'; g.strokeText(s, x, y); }
   g.fillStyle = col; g.fillText(s, x, y);
 }
+// светлините се рисуват от готова картинка за всеки цвят – много по-бързо от нов градиент всеки кадър
+const GLOWS = new Map();
+function glowSpr(col) {
+  let c = GLOWS.get(col);
+  if (!c) {
+    c = document.createElement('canvas'); c.width = c.height = 96; const x = c.getContext('2d');
+    const gr = x.createRadialGradient(48, 48, 0, 48, 48, 48); gr.addColorStop(0, rgba(col, 1)); gr.addColorStop(0.4, rgba(col, 0.35)); gr.addColorStop(1, rgba(col, 0));
+    x.fillStyle = gr; x.fillRect(0, 0, 96, 96); GLOWS.set(col, c);
+  }
+  return c;
+}
 function glow(x, y, r, col, a = 1) {
-  const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, rgba(col, a)); gr.addColorStop(0.4, rgba(col, a * 0.35)); gr.addColorStop(1, rgba(col, 0));
-  g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+  if (!(a > 0) || !(r > 0)) return;
+  const ga = g.globalAlpha; g.globalAlpha = ga * Math.min(1, a); g.drawImage(glowSpr(col), x - r, y - r, r * 2, r * 2); g.globalAlpha = ga;
 }
 function ball(x, y, r, col, dk = 0) {
   const gr = g.createRadialGradient(x + r * 0.25, y - r * 0.4, r * 0.1, x, y, r * 1.15);
@@ -945,7 +1164,8 @@ function foot(x, y, a2, len, h, col, dk, toes) {
   g.save(); g.translate(x, y); g.rotate(-a2);
   g.beginPath(); g.moveTo(-h * 0.7, -h * 0.7); g.lineTo(len * 0.5, -h * 0.8); g.quadraticCurveTo(len + 1, -h * 0.55, len, h * 0.45); g.lineTo(-h * 0.8, h * 0.45); g.quadraticCurveTo(-h * 1.15, 0, -h * 0.7, -h * 0.7); g.closePath();
   outlineFill(vgrad(-h, h, [[0, tone(col, 35 - dk)], [0.5, tone(col, -dk)], [1, tone(col, -45 - dk)]]), 2.2);
-  if (toes) { g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(len * 0.6, -h * 0.25); g.lineTo(len * 0.97, -h * 0.1); g.moveTo(len * 0.58, h * 0.15); g.lineTo(len * 0.95, h * 0.2); g.stroke(); }
+  if (toes === 2) { g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(len * 0.6, -h * 0.75); g.lineTo(len * 0.68, -h * 0.05); g.stroke(); }
+  else if (toes) { g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(len * 0.6, -h * 0.25); g.lineTo(len * 0.97, -h * 0.1); g.moveTo(len * 0.58, h * 0.15); g.lineTo(len * 0.95, h * 0.2); g.stroke(); }
   g.restore();
 }
 function fist(x, y, r, col, dk, ang) {
@@ -1025,6 +1245,19 @@ function weapon(type, hx, hy, a, t) {
       g.restore();
       break;
     }
+    case 'club': { // тежка тояга с метални шипове
+      const [h0x, h0y] = P(-4), [h1x, h1y] = P(6); capsule(h0x, h0y, h1x, h1y, 1.4, 1.4, '#3a2a1a', 0);
+      const [c0x, c0y] = P(5), [c1x, c1y] = P(31); capsule(c0x, c0y, c1x, c1y, 2.2, 3.6, '#5a4a40', 0);
+      for (let n = 9; n < 30; n += 3.4) for (const o of [-1, 1]) { const [x, y] = P(n), w = lerp(2.2, 3.6, (n - 5) / 26) * 0.7; circ(x + px * o * w, y + py * o * w, 0.65, '#d0d4dc', OUT, 0.35); }
+      break;
+    }
+    case 'kusari': { // сърп; веригата се рисува отделно
+      const [h0x, h0y] = P(-3), [h1x, h1y] = P(6); capsule(h0x, h0y, h1x, h1y, 1.1, 1.1, '#5a3a1a', 0);
+      const [bx, by] = P(5.5);
+      g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + px * 5 + dx * 3, by + py * 5 + dy * 3, bx + px * 9 - dx, by + py * 9 - dy); g.quadraticCurveTo(bx + px * 4 + dx * 1.2, by + py * 4 + dy * 1.2, bx - dx * 0.8, by - dy * 0.8); g.closePath();
+      outlineFill(steel(bx + px * 4, by + py * 4, 1.2), 1.1);
+      break;
+    }
     case 'claws':
       for (const o of [-0.3, 0, 0.3]) {
         const b = a + o, ex = Math.sin(b), ey = Math.cos(b), qx = ey, qy = -ex;
@@ -1044,14 +1277,16 @@ function swoosh(cx, cy, r, a0, a1, col) {
 }
 
 // ---------------------------------------------------------------- модели: глави
-function headTurtle(x, y, r, C, t) {
-  const tw = Math.sin(t * 0.22) * 1.8, tw2 = Math.sin(t * 0.22 + 1.2) * 1.8;
-  // опашки на превръзката
-  for (const [ex, ey, w, ph] of [[-r - 9, 2 + tw, 1.8, tw], [-r - 7.5, 7 - tw2, 1.5, tw2]]) {
+// ex – изражение: calm, scowl, smart, grin, angry, yell, ouch, blink; tr – коя костенурка (лунички, зъби...)
+function headTurtle(x, y, r, C, t, ex = 'calm', tr = '', wind = 0) {
+  const tw = Math.sin(t * 0.22) * (1.8 + wind), tw2 = Math.sin(t * 0.22 + 1.2) * (1.8 + wind), tl = 1 + wind * 0.35;
+  // опашки на превръзката – при бягане и скок се развяват повече
+  for (const [ex0, ey0, w, ph] of [[-r - 9 * tl, 2 + tw - wind * 2, 1.8, tw], [-r - 7.5 * tl, 7 - tw2 - wind * 2.5, 1.5, tw2]]) {
     const kx = x - r * 0.75, ky = y - 1.2;
-    g.beginPath(); g.moveTo(kx, ky - w); g.quadraticCurveTo(x - r - 3, y - 3 + ph * 0.6, x + ex, y + ey - w * 0.3);
-    g.lineTo(x + ex - 0.6, y + ey + w * 0.9); g.quadraticCurveTo(x - r - 3, y - 0.5 + ph * 0.6, kx, ky + w); g.closePath();
+    g.beginPath(); g.moveTo(kx, ky - w); g.quadraticCurveTo(x - r - 3, y - 3 + ph * 0.6, x + ex0, y + ey0 - w * 0.3);
+    g.lineTo(x + ex0 - 0.6, y + ey0 + w * 0.9); g.quadraticCurveTo(x - r - 3, y - 0.5 + ph * 0.6, kx, ky + w); g.closePath();
     outlineFill(vgrad(y - 4, y + 8, [[0, tone(C.band, 30)], [1, tone(C.band, -35)]]), 1.8);
+    g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 0.4; g.beginPath(); g.moveTo(kx - 1, ky); g.quadraticCurveTo(x - r - 3, y - 1.8 + ph * 0.6, x + ex0 - 0.3, y + ey0 + w * 0.3); g.stroke();
   }
   g.beginPath(); g.arc(x - r * 0.78, y - 1.2, 1.9, 0, TAU); outlineFill(ball(x - r * 0.78, y - 1.2, 1.9, C.band), 1.5);
   // глава + муцуна
@@ -1064,40 +1299,116 @@ function headTurtle(x, y, r, C, t) {
   g.lineTo(x + r * 1.4, y + r * 0.1); g.lineTo(x - r * 1.2, y + r * 0.12); g.closePath();
   g.fillStyle = vgrad(y - r * 0.55, y + r * 0.12, [[0, tone(C.band, 30)], [0.5, C.band], [1, tone(C.band, -40)]]); g.fill();
   g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(x - r * 1.2, y + r * 0.12); g.lineTo(x + r * 1.4, y + r * 0.1); g.stroke();
-  // бузи в сянка отдолу
+  g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(x - r * 1.1, y - r * 0.42); g.lineTo(x + r * 0.15, y - r * 0.4); g.stroke();
+  // гънки на превръзката до възела
+  g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 0.45; g.beginPath();
+  for (const o of [-0.3, 0, 0.3]) { g.moveTo(x - r * 0.62, y - r * 0.2 + o * r * 0.5); g.lineTo(x - r * 0.3, y - r * 0.2 + o * r * 0.35); }
+  g.stroke();
+  // бузи в сянка отдолу, отблясък на темето
   g.fillStyle = 'rgba(0,0,0,.14)'; g.beginPath(); g.ellipse(x + 1, y + r * 0.95, r * 1.1, r * 0.35, 0, 0, TAU); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.16)'; g.beginPath(); g.ellipse(x - r * 0.15, y - r * 0.72, r * 0.45, r * 0.16, -0.2, 0, TAU); g.fill();
+  if (tr === 'mik') { g.fillStyle = 'rgba(70,110,30,.55)'; for (const [fx, fy] of [[0.3, 0.3], [0.45, 0.38], [0.36, 0.48], [0.95, 0.12]]) { g.beginPath(); g.arc(x + r * fx, y + r * fy, 0.42, 0, TAU); g.fill(); } }
   g.restore();
   // очи
+  const ang = ex === 'angry' || ex === 'yell' || ex === 'scowl', cx = x + r * 0.4;
   for (const [ox, s] of [[r * 0.68, 1], [r * 0.12, 0.85]]) {
-    g.beginPath(); g.ellipse(x + ox, y - r * 0.2, 1.55 * s, 1.15 * s, -0.15, 0, TAU); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 0.6; g.strokeStyle = OUT; g.stroke();
-    circ(x + ox + 0.45 * s, y - r * 0.18, 0.62 * s, '#101010', null);
-    circ(x + ox + 0.2 * s, y - r * 0.28, 0.25 * s, '#fff', null);
+    const exx = x + ox, eyy = y - r * 0.2, inner = exx < cx ? 1 : -1;
+    if (ex === 'blink') { g.strokeStyle = OUT; g.lineWidth = 0.7; g.beginPath(); g.moveTo(exx - 1.5 * s, eyy); g.quadraticCurveTo(exx, eyy + 0.9 * s, exx + 1.5 * s, eyy); g.stroke(); continue; }
+    if (ex === 'ouch') { g.strokeStyle = OUT; g.lineWidth = 0.75; g.lineCap = 'round'; g.beginPath(); g.moveTo(exx - inner * 1.3 * s, eyy - 1 * s); g.lineTo(exx + inner * 0.9 * s, eyy); g.lineTo(exx - inner * 1.3 * s, eyy + 1 * s); g.stroke(); continue; }
+    g.beginPath(); g.ellipse(exx, eyy, 1.55 * s, 1.15 * s, -0.15, 0, TAU); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 0.6; g.strokeStyle = OUT; g.stroke();
+    circ(exx + 0.45 * s, y - r * 0.18 + (ex === 'smart' ? -0.15 : 0), 0.62 * s, '#101010', null);
+    circ(exx + 0.2 * s, y - r * 0.28, 0.25 * s, '#fff', null);
+    if (ang) { // спуснат клепач към носа – ядосан поглед
+      const yi = eyy - (ex === 'scowl' ? 0.35 : 0.1) * s, yo = eyy - 1.3 * s;
+      g.beginPath(); g.moveTo(exx - 1.9 * s, eyy - 2 * s); g.lineTo(exx + 1.9 * s, eyy - 2 * s);
+      g.lineTo(exx + 1.9 * s, inner > 0 ? yi : yo); g.lineTo(exx - 1.9 * s, inner > 0 ? yo : yi); g.closePath();
+      g.fillStyle = tone(C.band, -10); g.fill();
+      g.strokeStyle = OUT; g.lineWidth = 0.7; g.beginPath(); g.moveTo(exx + 1.7 * s, inner > 0 ? yi : yo); g.lineTo(exx - 1.7 * s, inner > 0 ? yo : yi); g.stroke();
+    } else if (ex === 'grin') { // весели очи – долният клепач се вдига
+      g.strokeStyle = tone(C.band, -30); g.lineWidth = 0.6; g.beginPath(); g.arc(exx, eyy + 1.4 * s, 1.5 * s, -2.4, -0.7); g.stroke();
+    }
   }
-  // уста и ноздра
-  g.strokeStyle = OUT; g.lineWidth = 0.8; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(x + r * 0.25, y + r * 0.52); g.quadraticCurveTo(x + r * 0.8, y + r * 0.72, x + r * 1.12, y + r * 0.36); g.stroke();
+  // уста
+  const mx0 = x + r * 0.25, my0 = y + r * 0.5, mx1 = x + r * 1.13, my1 = y + r * 0.34;
+  g.strokeStyle = OUT; g.lineWidth = 0.8; g.lineCap = 'round'; g.lineJoin = 'round';
+  if (ex === 'yell') {
+    g.beginPath(); g.moveTo(mx0, my0 - 0.4); g.quadraticCurveTo(x + r * 0.7, y + r * 0.42, mx1, my1); g.quadraticCurveTo(x + r * 0.95, y + r * 1.05, x + r * 0.5, y + r * 0.95); g.closePath();
+    g.fillStyle = '#5a1418'; g.fill(); g.stroke();
+    g.save(); g.clip(); g.fillStyle = '#fff'; g.fillRect(mx0, my0 - 1.6, r, 1.5); g.fillStyle = '#e86a6a'; g.beginPath(); g.ellipse(x + r * 0.7, y + r * 0.98, r * 0.3, r * 0.17, 0, 0, TAU); g.fill(); g.restore();
+  } else if (ex === 'grin') {
+    g.beginPath(); g.moveTo(mx0 - 0.4, my0 - 0.8); g.quadraticCurveTo(x + r * 0.7, y + r * 0.5, mx1 + 0.2, my1 - 0.6); g.quadraticCurveTo(x + r * 0.85, y + r * 1.0, mx0 - 0.4, my0 - 0.8); g.closePath();
+    g.fillStyle = '#fff'; g.fill(); g.stroke();
+    g.lineWidth = 0.4; g.beginPath(); g.moveTo(mx0 + 0.6, my0 - 0.3); g.quadraticCurveTo(x + r * 0.7, y + r * 0.7, mx1 - 0.3, my1 - 0.2); g.stroke();
+  } else if (ex === 'ouch') {
+    g.beginPath(); g.moveTo(mx0, my0); for (let i = 1; i <= 5; i++) g.lineTo(lerp(mx0, mx1, i / 5), lerp(my0, my1, i / 5) + (i % 2 ? 0.9 : -0.3)); g.stroke();
+  } else if (ex === 'scowl' || ex === 'angry') {
+    g.beginPath(); g.moveTo(mx0 + 0.5, my0 + 0.4); g.quadraticCurveTo(x + r * 0.75, y + r * 0.5, mx1, my1 + 0.6); g.stroke();
+    g.lineWidth = 0.5; g.beginPath(); g.moveTo(mx0 + 0.5, my0 + 0.4); g.lineTo(mx0 + 0.1, my0 + 1.1); g.stroke();
+  } else {
+    g.beginPath(); g.moveTo(mx0, my0); g.quadraticCurveTo(x + r * 0.8, y + r * 0.72, mx1, my1); g.stroke();
+    if (ex === 'smart' || tr === 'don') { g.fillStyle = '#fff'; g.lineWidth = 0.4; for (const o of [0.72, 0.86]) { g.beginPath(); g.rect(x + r * o, y + r * 0.56 - (o - 0.72) * 1.4, r * 0.11, 1.3); g.fill(); g.stroke(); } }
+  }
   circ(x + r * 1.08, y + r * 0.05, 0.35, '#1a3a12', null);
 }
-function headNinja(x, y, r, C, t) {
+function headNinja(x, y, r, C, t, d = {}) {
   const tw = Math.sin(t * 0.2) * 1.5;
+  if (d.hair) { // опашка от коса
+    const hw = Math.sin(t * 0.17) * 2;
+    g.beginPath(); g.moveTo(x - r * 0.3, y - r * 0.95); g.quadraticCurveTo(x - r * 1.6, y - r * 1.5 + hw, x - r * 2.3, y + 1 + hw); g.quadraticCurveTo(x - r * 1.5, y - r * 0.3 + hw, x - r * 0.75, y - r * 0.35); g.closePath();
+    outlineFill(vgrad(y - r * 1.5, y + 2, [[0, '#3a3040'], [1, '#0e0a12']]), 1.6);
+    rrect(x - r * 0.75, y - r * 1.05, 3, 2.4, 0.8); outlineFill('#c9a24a', 1);
+  }
   g.beginPath(); g.moveTo(x - r * 0.8, y - 2.4); g.quadraticCurveTo(x - r - 3, y - 2 + tw, x - r - 6, y + 1 + tw); g.lineTo(x - r - 5.5, y + 2.6 + tw); g.quadraticCurveTo(x - r - 2, y + tw, x - r * 0.8, y - 0.6); g.closePath();
   outlineFill(tone(C.suit, -20), 1.6);
   g.beginPath(); g.arc(x, y, r, 0, TAU); outlineFill(ball(x, y, r, C.suit));
   g.save(); g.beginPath(); g.arc(x, y, r, 0, TAU); g.clip();
-  g.fillStyle = vgrad(y - 3, y + 1.5, [[0, tone(C.mask, 20)], [1, tone(C.mask, -30)]]); g.fillRect(x - r, y - 2.9, r * 2, 3.9);
+  // процеп за очите и гънки на качулката
+  g.fillStyle = vgrad(y - 3, y + 1.5, [[0, tone(C.mask, 20)], [1, tone(C.mask, -30)]]); g.fillRect(x - r * 0.15, y - 2.9, r * 1.3, 3.9);
   g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(x - r, y + r * 0.45, r * 2, r);
+  g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 0.5; g.beginPath();
+  g.moveTo(x - r * 0.9, y - r * 0.2); g.quadraticCurveTo(x - r * 0.4, y + r * 0.1, x - r * 0.2, y + r * 0.8);
+  g.moveTo(x + r * 0.1, y + r * 0.35); g.quadraticCurveTo(x + r * 0.5, y + r * 0.55, x + r * 0.95, y + r * 0.4); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.ellipse(x - r * 0.2, y - r * 0.62, r * 0.45, r * 0.18, -0.3, 0, TAU); g.fill();
   g.restore();
-  for (const [ox, s] of [[r * 0.55, 1], [r * 0.08, 0.8]]) {
-    g.beginPath(); g.ellipse(x + ox, y - 1, 1.5 * s, 0.75 * s, -0.12, 0, TAU); g.fillStyle = '#fff'; g.fill();
-    circ(x + ox + 0.3 * s, y - 1, 0.45 * s, '#111', null);
+  // присвити очи
+  for (const [ox, s] of [[r * 0.58, 1], [r * 0.1, 0.8]]) {
+    g.beginPath(); g.moveTo(x + ox - 1.5 * s, y - 1.6 * s); g.lineTo(x + ox + 1.6 * s, y - 0.7 * s); g.quadraticCurveTo(x + ox + 0.2, y + 0.2 * s, x + ox - 1.5 * s, y - 0.5 * s); g.closePath();
+    g.fillStyle = '#fff'; g.fill();
+    circ(x + ox + 0.35 * s, y - 0.8 * s, 0.45 * s, '#111', null);
   }
-  g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 0.6; g.beginPath(); g.arc(x - r * 0.2, y + 0.5, r * 0.75, 1.7, 2.9); g.stroke();
+  // челна плочка с отличителния знак (ромб – измислен знак)
+  if (d.plate) {
+    rrect(x - r * 0.2, y - r * 0.95, r * 1.05, r * 0.42, 0.8); outlineFill(hgrad(x - r * 0.2, x + r * 0.85, [[0, '#e8ecf2'], [0.5, '#9aa4b2'], [1, '#5a6270']]), 1.1);
+    g.fillStyle = '#b02a2a'; g.beginPath(); g.moveTo(x + r * 0.33, y - r * 0.92); g.lineTo(x + r * 0.45, y - r * 0.74); g.lineTo(x + r * 0.33, y - r * 0.56); g.lineTo(x + r * 0.21, y - r * 0.74); g.closePath(); g.fill();
+  }
+}
+function headBrute(x, y, r, C, t) {
+  // шлем с рога и желязна маска със светещи очи
+  for (const s of [-1, 1]) { g.beginPath(); g.moveTo(x + s * 2 - 1, y - r * 0.7); g.quadraticCurveTo(x + s * r * 1.3, y - r * 1.2, x + s * r * 1.15, y - r * 2.1); g.quadraticCurveTo(x + s * r * 0.75, y - r * 1.25, x + s * 2 + 1.5, y - r * 0.45); g.closePath(); outlineFill(hgrad(x, x + s * r * 1.3, [[0, '#f0e6c8'], [1, '#a89a70']]), 1.3); }
+  g.beginPath(); g.arc(x, y, r, 0, TAU); outlineFill(ball(x, y, r, tone(C.suit, -10)));
+  g.beginPath(); g.arc(x, y - 0.6, r + 1.2, Math.PI * 1.02, -0.02); g.lineTo(x + r + 2, y + 0.8); g.lineTo(x - r - 2.4, y + 1.2); g.closePath();
+  outlineFill(ball(x, y - 3, r + 2, '#4a4f5a'), 1.8);
+  g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 0.6; g.beginPath(); g.arc(x, y - 0.6, r - 0.2, Math.PI + 0.4, -0.5); g.stroke();
+  g.fillStyle = '#c42b2b'; for (let i = -2; i <= 2; i++) g.fillRect(x + i * 2.2 - 0.4, y - r - 0.4, 0.8, 1.4);
+  rrect(x - 0.5, y - 0.6, r + 1.6, r * 0.9, 1.6); outlineFill(vgrad(y, y + r, [[0, '#7a2020'], [1, '#2a0808']]), 1.4);
+  g.fillStyle = '#fff'; for (let i = 0; i < 3; i++) g.fillRect(x + 1.6 + i * 1.6, y + r * 0.55, 0.9, 1.4);
+  g.save(); g.globalCompositeOperation = 'lighter'; glow(x + 3.5, y - 2.2, 4, '#ffb020', 0.9); g.restore();
+  g.fillStyle = '#ffe070'; g.fillRect(x + 1.5, y - 2.8, 4.4, 1.1);
+}
+function turtleFace(e) {
+  const s = e.state;
+  if (s === 'hurt' || s === 'down' || s === 'dead' || s === 'getup') return 'ouch';
+  if (s === 'special' || s === 'super' || s === 'throw' || (s === 'jump' && e.jk) || (s === 'attack' && e.combo === 3)) return 'yell';
+  if (s === 'attack') return 'angry';
+  if (e.anim % 210 > 202) return 'blink';
+  return e.t.face;
 }
 function headOf(style, x, y, r, e, t) {
   const C = e.C;
   switch (style) {
-    case 'turtle': return headTurtle(x, y, r, C, t);
-    case 'ninja': return headNinja(x, y, r, C, t);
+    case 'turtle': return headTurtle(x, y, r, C, t, turtleFace(e), e.t.id, ['walk', 'jump', 'super', 'special', 'respawn'].includes(e.state) ? (e.state === 'walk' ? 1 : 2.5) : 0);
+    case 'ninja': return headNinja(x, y, r, C, t, e.def);
+    case 'brute': return headBrute(x, y, r, C, t);
     case 'soldier': {
       g.beginPath(); g.arc(x, y, r, 0, TAU); outlineFill(ball(x, y, r, '#6d7682'));
       rrect(x - 1, y - 2.8, r + 1.2, 3.8, 1.4); outlineFill(hgrad(x - 1, x + r, [[0, '#ff6a6a'], [1, '#a01010']]), 1.2);
@@ -1177,28 +1488,57 @@ function headOf(style, x, y, r, e, t) {
 function torsoOf(style, S, hipY, shY, e, t) {
   const bw = S.bodyW, C = e.C, my = (hipY + shY) / 2, th = hipY - shY;
   if (style === 'turtle') {
+    const id = e.t.id;
+    // ножниците на Лео стърчат зад рамото
+    if (id === 'leo') for (const [x0, y0, x1, y1] of [[-bw * 0.62, my, -bw * 0.12, shY - 8], [-bw * 0.8, my + 2, -bw * 0.5, shY - 7]]) {
+      capsule(x0, y0, x1, y1, 1.3, 1.2, '#5a4a6a', 0);
+      const ax = lerp(x0, x1, 0.85), ay = lerp(y0, y1, 0.85); capPath(ax, ay, x1, y1, 1.45, 1.35); g.fillStyle = '#d8b040'; g.fill();
+    }
     g.save(); g.translate(-bw * 0.3, my + 0.6); g.rotate(-0.1);
     const rx = bw * 0.52, ry = th * 0.68;
     g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, TAU);
     const sg = g.createRadialGradient(-rx * 0.2, -ry * 0.5, 1, 0, 0, Math.max(rx, ry) * 1.1);
     sg.addColorStop(0, tone(C.shell, 40)); sg.addColorStop(0.5, C.shell); sg.addColorStop(1, tone(C.shell, -50)); outlineFill(sg);
+    // ръбови плочки по края на черупката
     g.beginPath(); g.ellipse(0, 0, rx * 0.8, ry * 0.82, 0, 0, TAU); g.lineWidth = 1.1; g.strokeStyle = tone(C.shell, 30); g.stroke();
-    g.strokeStyle = tone(C.shell, -40); g.lineWidth = 0.7; g.beginPath();
-    const hx = -rx * 0.35, hr = ry * 0.32;
-    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; const x1 = hx + Math.cos(a) * hr, y1 = Math.sin(a) * hr; if (i === 0) g.moveTo(x1, y1); else g.lineTo(x1, y1); }
-    g.closePath();
-    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; g.moveTo(hx + Math.cos(a) * hr, Math.sin(a) * hr); g.lineTo(hx + Math.cos(a) * rx * 0.78, Math.sin(a) * ry * 0.8); }
+    g.strokeStyle = tone(C.shell, -45); g.lineWidth = 0.6; g.beginPath();
+    for (let i = 0; i < 14; i++) { const a = i * TAU / 14; g.moveTo(Math.cos(a) * rx * 0.8, Math.sin(a) * ry * 0.82); g.lineTo(Math.cos(a) * rx, Math.sin(a) * ry); }
     g.stroke();
+    // средни шестоъгълни плочки
+    const hx = -rx * 0.35, hr = ry * 0.32;
+    g.beginPath();
+    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; const x1 = hx + Math.cos(a) * hr, y1 = Math.sin(a) * hr; if (i === 0) g.moveTo(x1, y1); else g.lineTo(x1, y1); }
+    g.closePath(); g.fillStyle = 'rgba(255,255,255,.07)'; g.fill();
+    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; g.moveTo(hx + Math.cos(a) * hr, Math.sin(a) * hr); g.lineTo(hx + Math.cos(a) * rx * 0.78, Math.sin(a) * ry * 0.8); }
+    g.lineWidth = 0.8; g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.ellipse(-rx * 0.35, -ry * 0.55, rx * 0.35, ry * 0.12, -0.3, 0, TAU); g.fill();
+    if (id === 'raf') { g.strokeStyle = 'rgba(30,15,5,.7)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(-rx * 0.7, ry * 0.2); g.lineTo(-rx * 0.5, ry * 0.32); g.lineTo(-rx * 0.58, ry * 0.45); g.stroke(); }
     g.restore();
     torsoPath(shY, hipY, bw, bw * 0.82); outlineFill(bodyGrad(bw, shY, hipY, C.skin));
-    g.save(); g.beginPath(); g.ellipse(bw * 0.12, my + 0.6, bw * 0.37, th * 0.52, 0, 0, TAU);
+    // ръб на черупката отстрани (мостът между черупката и пластрона)
+    g.beginPath(); g.moveTo(-bw * 0.48, shY + 2); g.quadraticCurveTo(-bw * 0.56, my, -bw * 0.4, hipY - 1); g.lineWidth = 2.2; g.strokeStyle = OUT; g.stroke(); g.lineWidth = 1.2; g.strokeStyle = tone(C.shell, 15); g.stroke();
+    // пластрон – щит с плочки
+    const px0 = -bw * 0.22, px1 = bw * 0.47, pcx = (px0 + px1) / 2;
+    g.save(); g.beginPath(); g.moveTo(px0, shY + 0.6); g.quadraticCurveTo(pcx, shY - 1, px1, shY + 0.6);
+    g.quadraticCurveTo(px1 + 1, my + 2, pcx + 1, hipY + 1); g.quadraticCurveTo(px0 - 1, my + 2, px0, shY + 0.6); g.closePath();
     outlineFill(vgrad(shY, hipY, [[0, tone(C.plas, 35)], [0.5, C.plas], [1, tone(C.plas, -35)]]), 1.8);
     g.clip(); g.strokeStyle = tone(C.plas, -40); g.lineWidth = 0.7; g.beginPath();
-    for (let i = 1; i < 4; i++) { const yy = shY + th * i / 4 + 1; g.moveTo(-bw * 0.3, yy); g.lineTo(bw * 0.6, yy + 0.6); }
-    g.moveTo(bw * 0.12, shY); g.lineTo(bw * 0.14, hipY); g.stroke();
+    for (let i = 1; i < 4; i++) { const yy = shY + th * i / 4 + 1; g.moveTo(px0 - 2, yy - 0.6); g.quadraticCurveTo(pcx, yy + 0.8, px1 + 2, yy - 0.2); }
+    g.moveTo(pcx, shY); g.lineTo(pcx + 0.5, hipY + 1); g.stroke();
+    g.strokeStyle = tone(C.plas, 40); g.lineWidth = 0.5; g.beginPath(); g.moveTo(px0 + 1.2, shY + 2); g.quadraticCurveTo(px0, my, pcx, hipY - 1); g.stroke();
     g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.ellipse(bw * 0.22, shY + th * 0.25, bw * 0.12, th * 0.12, -0.3, 0, TAU); g.fill();
+    if (id === 'raf') { g.fillStyle = tone(C.plas, -55); g.beginPath(); g.moveTo(px1 + 1, shY + th * 0.4); g.lineTo(px1 - 2.2, shY + th * 0.48); g.lineTo(px1 + 1, shY + th * 0.58); g.fill(); }
     g.restore();
+    // ремък през гърдите (Лео има два – кръстосани)
+    const strap = (x0, y0, x1, y1) => {
+      capPath(x0, y0, x1, y1, 1.25, 1.25); outlineFill(cyl(x0, y0, x1, y1, 1.25, C.belt, 0), 1.3);
+      g.strokeStyle = 'rgba(255,220,160,.3)'; g.lineWidth = 0.35; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    };
+    strap(bw * 0.44, shY + 0.5, -bw * 0.4, hipY - 2.5);
+    if (id === 'leo') { strap(-bw * 0.36, shY + 0.5, bw * 0.46, hipY - 2.5); circ(bw * 0.04, my - 0.6, 1.5, '#d8b040', OUT, 0.8); }
     rrect(-bw / 2 + 0.5, hipY - 3, bw - 1, 3.4, 1.2); outlineFill(vgrad(hipY - 3, hipY, [[0, tone(C.belt, 30)], [1, tone(C.belt, -35)]]), 1.6);
+    if (id === 'don') { rrect(-bw * 0.42, hipY - 2, 4.2, 4.6, 0.8); outlineFill(vgrad(hipY - 2, hipY + 3, [[0, '#8a6a40'], [1, '#4a3418']]), 1.2); seg(-bw * 0.42 + 2.1, hipY - 2.5, -bw * 0.42 + 2.1, hipY - 4.5, 0.5, '#9aa3ad'); }
+    if (id === 'raf') { capsule(-bw * 0.45, hipY - 1.5, -bw * 0.15, hipY + 4, 0.9, 0.9, '#a0302a', 0); }
     g.beginPath(); g.arc(bw * 0.2, hipY - 1.3, 2.2, 0, TAU); outlineFill(ball(bw * 0.2, hipY - 1.3, 2.2, '#d8b040'), 1.2);
     g.font = 'bold 3px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#5a3a10'; g.fillText(e.t.name[0], bw * 0.2, hipY - 1.2);
     return;
@@ -1220,12 +1560,48 @@ function torsoOf(style, S, hipY, shY, e, t) {
   const col = style === 'ninja' ? C.suit : style === 'soldier' ? '#7d8794' : C.torso;
   torsoPath(shY, hipY, bw, bw * 0.84); outlineFill(bodyGrad(bw, shY, hipY, col));
   switch (style) {
-    case 'ninja':
+    case 'ninja': {
+      const d = e.def, fl = Math.sin(t * 0.25) * 1.2;
+      // запазка на кимоното с мрежеста риза отдолу
       g.beginPath(); g.moveTo(-bw * 0.3, shY - 1); g.lineTo(bw * 0.12, my); g.lineTo(bw * 0.42, shY - 1); g.closePath(); g.fillStyle = tone(C.suit, -45); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,.13)'; g.lineWidth = 0.3; g.beginPath(); g.moveTo(-bw * 0.1, shY); g.lineTo(bw * 0.2, shY + 3); g.moveTo(bw * 0.3, shY); g.lineTo(bw * 0.05, shY + 3); g.stroke();
       g.strokeStyle = tone(C.suit, 25); g.lineWidth = 0.8; g.beginPath(); g.moveTo(-bw * 0.3, shY - 1); g.lineTo(bw * 0.12, my); g.stroke();
+      g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(-bw * 0.36, my + 1); g.quadraticCurveTo(-bw * 0.1, my + 3, bw * 0.02, hipY - 3); g.moveTo(bw * 0.38, my - 1); g.quadraticCurveTo(bw * 0.28, my + 2, bw * 0.4, hipY - 3); g.stroke();
+      if (d.plate) {
+        rrect(-bw * 0.12, shY + 2, bw * 0.56, th * 0.42, 1.6); outlineFill(vgrad(shY + 2, shY + 2 + th * 0.42, [[0, '#c8ced8'], [0.5, '#8a929e'], [1, '#4a505a']]), 1.2);
+        g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 0.4; g.beginPath(); g.moveTo(-bw * 0.12, shY + 2 + th * 0.21); g.lineTo(bw * 0.44, shY + 2 + th * 0.21); g.stroke();
+      }
+      // измислен знак на клана – червен ромб
+      const ex = bw * 0.24, ey = shY + th * (d.plate ? 0.3 : 0.42);
+      g.beginPath(); g.moveTo(ex, ey - 2.2); g.lineTo(ex + 1.7, ey); g.lineTo(ex, ey + 2.2); g.lineTo(ex - 1.7, ey); g.closePath(); outlineFill('#c42b2b', 0.8);
+      circ(ex, ey, 0.55, '#ffe0d0', null);
+      // пояс с възел и развяващи се краища
       rrect(-bw / 2, hipY - 3, bw, 3.2, 1); outlineFill(vgrad(hipY - 3, hipY, [[0, '#3a3040'], [1, '#141018']]), 1.4);
-      g.beginPath(); g.moveTo(bw * 0.3, hipY - 1); g.lineTo(bw * 0.2, hipY + 5); g.lineTo(bw * 0.4, hipY + 4.5); g.closePath(); outlineFill('#221c28', 1.2);
+      for (const [dx, len] of [[0, 6], [1.6, 5]]) { g.beginPath(); g.moveTo(bw * 0.28 + dx, hipY - 1); g.quadraticCurveTo(bw * 0.25 + dx - fl, hipY + len * 0.5, bw * 0.18 + dx - fl * 1.6, hipY + len); g.lineTo(bw * 0.3 + dx - fl * 1.6, hipY + len - 0.5); g.quadraticCurveTo(bw * 0.34 + dx - fl, hipY + len * 0.5, bw * 0.36 + dx, hipY - 1); g.closePath(); outlineFill('#221c28', 1); }
+      circ(bw * 0.32, hipY - 1.5, 1.3, '#2a2230', OUT, 0.8);
+      if (d.bag) { // торбичка с бомби
+        rrect(-bw * 0.62, hipY - 2.5, 5.4, 5.6, 1.2); outlineFill(vgrad(hipY - 2.5, hipY + 3, [[0, '#9a7a4a'], [1, '#4a3418']]), 1.2);
+        circ(-bw * 0.62 + 2.7, hipY - 3, 2, '#24242a', OUT, 0.9); seg(-bw * 0.62 + 3.4, hipY - 4.8, -bw * 0.62 + 4.6, hipY - 6.2, 0.4, '#c9a24a');
+      }
       break;
+    }
+    case 'brute': {
+      // ламеларна броня: редове плочки, вързани с червени шнурове
+      g.save(); torsoPath(shY, hipY, bw, bw * 0.84); g.clip();
+      const rh = (th - 3) / 4;
+      for (let r = 0; r < 4; r++) {
+        const yy = shY + 1 + r * rh; rrect(-bw / 2 - 1, yy, bw + 2, rh + 0.8, 1);
+        g.fillStyle = vgrad(yy, yy + rh, [[0, '#7a808e'], [0.5, '#525866'], [1, '#2a2e36']]); g.fill(); g.strokeStyle = OUT; g.lineWidth = 0.6; g.stroke();
+        g.strokeStyle = '#b02a2a'; g.lineWidth = 0.55; g.beginPath(); for (let i = -2; i <= 2; i++) { g.moveTo(i * bw * 0.2, yy + 0.8); g.lineTo(i * bw * 0.2, yy + rh - 0.4); } g.stroke();
+        g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(-bw / 2, yy + 0.4, bw, 0.6);
+      }
+      g.restore();
+      g.beginPath(); g.arc(bw * 0.15, shY + th * 0.35, 3, 0, TAU); outlineFill(ball(bw * 0.15, shY + th * 0.35, 3, '#c9a24a'), 1.1);
+      g.fillStyle = '#7a1414'; g.beginPath(); g.moveTo(bw * 0.15, shY + th * 0.35 - 1.8); g.lineTo(bw * 0.15 + 1.4, shY + th * 0.35); g.lineTo(bw * 0.15, shY + th * 0.35 + 1.8); g.lineTo(bw * 0.15 - 1.4, shY + th * 0.35); g.fill();
+      rrect(-bw / 2, hipY - 3.8, bw, 4.2, 1.6); outlineFill(vgrad(hipY - 3.8, hipY, [[0, '#d8b060'], [1, '#6a4a20']]), 1.4);
+      g.strokeStyle = 'rgba(60,30,0,.55)'; g.lineWidth = 0.5; g.beginPath(); for (let i = -bw / 2 + 1; i < bw / 2; i += 1.8) { g.moveTo(i, hipY - 3.6); g.lineTo(i + 1.4, hipY); } g.stroke();
+      break;
+    }
     case 'soldier':
       rrect(-bw * 0.38, shY + 1, bw * 0.8, th * 0.55, 2); outlineFill(vgrad(shY, my, [[0, '#c0c8d2'], [1, '#6a727e']]), 1.4);
       g.save(); g.globalCompositeOperation = 'lighter'; glow(bw * 0.05, shY + th * 0.3, 4, '#ff4040', 0.7); g.restore(); circ(bw * 0.05, shY + th * 0.3, 1, '#ff8080', null);
@@ -1276,19 +1652,41 @@ function torsoOf(style, S, hipY, shY, e, t) {
 }
 // детайли пред предния крак (поли на броня, колан)
 function overLegs(style, S, hipY, e) {
-  if (style !== 'samurai') return;
-  const bw = S.bodyW;
+  if (style !== 'samurai' && style !== 'brute') return;
+  const bw = S.bodyW, br = style === 'brute', top = br ? '#6a707c' : '#3a3a48', bot = br ? '#2a2e36' : '#101016', lace = br ? '#b02a2a' : e.C.acc;
   for (let i = 0; i < 3; i++) {
     const x = -bw / 2 + 1 + i * (bw / 3);
-    rrect(x, hipY - 1, bw / 3 - 0.5, 7, 1); outlineFill(vgrad(hipY, hipY + 7, [[0, '#3a3a48'], [1, '#101016']]), 1.4);
-    g.strokeStyle = e.C.acc; g.lineWidth = 0.6; g.beginPath(); g.moveTo(x, hipY + 2.5); g.lineTo(x + bw / 3 - 0.5, hipY + 2.5); g.moveTo(x, hipY + 5); g.lineTo(x + bw / 3 - 0.5, hipY + 5); g.stroke();
+    rrect(x, hipY - 1, bw / 3 - 0.5, 7, 1); outlineFill(vgrad(hipY, hipY + 7, [[0, top], [1, bot]]), 1.4);
+    g.strokeStyle = lace; g.lineWidth = 0.6; g.beginPath(); g.moveTo(x, hipY + 2.5); g.lineTo(x + bw / 3 - 0.5, hipY + 2.5); g.moveTo(x, hipY + 5); g.lineTo(x + bw / 3 - 0.5, hipY + 5); g.stroke();
   }
+}
+// превръзки на ръцете и краката на нинджите
+function wraps(L, t0, t1, r, col) {
+  const x1 = lerp(L[0], L[2], t0), y1 = lerp(L[1], L[3], t0), x2 = lerp(L[0], L[2], t1), y2 = lerp(L[1], L[3], t1);
+  g.lineCap = 'butt'; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2);
+  g.strokeStyle = OUT; g.lineWidth = r * 2 + 1.4; g.stroke(); g.strokeStyle = col; g.lineWidth = r * 2 - 0.2; g.stroke();
+  g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 0.4; g.beginPath();
+  for (let k = 1; k < 4; k++) { const q = lerp(t0, t1, k / 4), x = lerp(L[0], L[2], q), y = lerp(L[1], L[3], q); g.moveTo(x - r, y - 0.6); g.lineTo(x + r, y + 0.6); }
+  g.stroke();
+}
+// веригата на сърпа: в покой виси, при засилване се върти, при удар се изстрелва напред
+function kusariChain(e, F, S, sc) {
+  let ex, ey;
+  const hx = F[2], hy = F[3];
+  if (e.state === 'attack') { const q = e.st <= 6 ? ease(e.st / 6) : clamp(1 - (e.st - 6) / 10, 0, 1); ex = hx + q * (e.def.reach / sc - hx + 4); ey = hy + q * 2; }
+  else if (e.state === 'windup') { const a = e.st * 0.7; ex = hx + Math.cos(a) * 9; ey = hy - 7 + Math.sin(a) * 4; }
+  else { ex = hx - 1 + Math.sin(e.anim * 0.1) * 1.2; ey = hy + 9; }
+  const n = Math.max(3, Math.round(Math.hypot(ex - hx, ey - hy) / 1.6)), sag = e.state === 'attack' ? 0.5 : 2;
+  g.fillStyle = '#9aa3ad'; g.strokeStyle = OUT; g.lineWidth = 0.3;
+  for (let i = 1; i < n; i++) { const q = i / n, x = lerp(hx, ex, q), y = lerp(hy, ey, q) + Math.sin(q * Math.PI) * sag; g.beginPath(); g.ellipse(x, y, 0.8, 0.5, i % 2 ? 0.8 : -0.8, 0, TAU); g.fill(); g.stroke(); }
+  circ(ex, ey, 1.9, ball(ex, ey, 1.9, '#6a707c'), OUT, 1);
 }
 
 // ---------------------------------------------------------------- модели: сглобяване
 const STY = {
   turtle: { leg: 8, torso: 14, bodyW: 15.5, headR: 7.4, arm: 7, lr: [3.6, 3.0, 2.4], ar: [3.0, 2.6, 2.1], hand: 2.6, foot: [6, 2.8] },
   ninja: { leg: 9, torso: 14, bodyW: 12, headR: 6, arm: 7.5, lr: [2.8, 2.3, 1.9], ar: [2.3, 1.9, 1.6], hand: 2.0, foot: [5, 2.2] },
+  brute: { leg: 9.5, torso: 18, bodyW: 23, headR: 6.8, arm: 9, lr: [4.6, 3.9, 3.3], ar: [4.4, 3.8, 3.3], hand: 3.8, foot: [7, 3.4] },
   soldier: { leg: 9, torso: 15, bodyW: 14, headR: 6.4, arm: 7.5, lr: [3.2, 2.7, 2.3], ar: [2.8, 2.3, 2.0], hand: 2.3, foot: [5.5, 2.6] },
   rhino: { leg: 9, torso: 17, bodyW: 20, headR: 8, arm: 8.5, lr: [4.3, 3.6, 3.0], ar: [4.1, 3.5, 3.0], hand: 3.5, foot: [6.5, 3.2] },
   boar: { leg: 9, torso: 17, bodyW: 20, headR: 8, arm: 8.5, lr: [4.2, 3.5, 3.0], ar: [4.0, 3.4, 3.0], hand: 3.4, foot: [6.5, 3.2] },
@@ -1298,7 +1696,7 @@ const STY = {
   brain: { leg: 10, torso: 18, bodyW: 21, headR: 6, arm: 9, lr: [4.5, 3.8, 3.2], ar: [4.3, 3.7, 3.2], hand: 3.9, foot: [7, 3.4] }
 };
 const XTRA = {
-  turtle: { foot: null, hand: null }, ninja: { foot: '#241c2a', hand: '#2a2230' }, soldier: { foot: '#3a3f48', hand: '#3a3f48' },
+  turtle: { foot: null, hand: null }, ninja: { foot: '#241c2a', hand: '#2a2230', wrap: '#cfc8c0' }, brute: { foot: '#22202a', hand: '#3a3040', wrap: '#5a4a3a' }, soldier: { foot: '#3a3f48', hand: '#3a3f48' },
   rhino: { foot: '#3a2a1a', hand: null }, boar: { foot: '#2a1a10', hand: null }, fly: { foot: '#1a1a20', hand: null },
   samurai: { foot: '#141418', hand: '#1b1b22' }, blade: { foot: '#23232d', hand: '#23232d' }, brain: { foot: '#34425a', hand: '#34425a' }
 };
@@ -1332,28 +1730,34 @@ function drawChar(e, cam = G.cam) {
   const style = e.pl ? 'turtle' : e.boss ? e.key : e.def.style;
   if (style === 'robot') return drawRobot(e, cam);
   if ((e.state === 'dead' || e.state === 'dying') && e.st > 20 && (e.st & 4)) return;
-  if (e.pl && e.inv > 0 && (e.inv & 4) && e.state !== 'respawn') return;
-  const S = STY[style], X = XTRA[style], sc = (e.sc || 1) * CHS, Q = pose(e), C = e.C, t = e.anim;
+  if (e.pl && e.inv > 0 && (e.inv & 4) && e.state !== 'respawn' && e.state !== 'super') return;
+  const S = e.pl ? (e.t.S || (e.t.S = Object.assign({}, STY.turtle, e.t.body))) : STY[style];
+  const X = XTRA[style], sc = (e.sc || 1) * CHS, Q = pose(e), t = e.anim; let C = e.C;
+  if (e.state === 'held') Q.rot = -Math.min(1, e.z / 30) * Math.PI / 2;
   g.save();
   if (e.ghost) g.globalAlpha = 0.2 + ((G.t & 2) ? 0.1 : 0);
-  if (e.flash > 3) g.filter = 'brightness(1.9)';
+  const C0 = e.C; if (e.flash > 3) e.C = C = e.Cf || (e.Cf = brighten(C0));
   g.translate(e.x - cam, e.y - e.z); g.scale(e.face * sc, sc);
   if (e.flash > 0 && (e.flash & 2)) g.translate(1, 0);
+  if (e.armorT > 0) g.translate((e.armorT & 2) ? 0.8 : -0.8, 0);
   if (Q.rot) { g.translate(0, -3); g.rotate(Q.rot); }
-  const hipY = -S.leg * 2 - 1.5 + Q.crouch, shY = hipY - S.torso + 2, tur = style === 'turtle';
+  const hipY = -S.leg * 2 - 1.5 + Q.crouch, shY = hipY - S.torso + 2, tur = style === 'turtle', wr = X.wrap;
   const [l0, l1, l2] = S.lr, [a0, a1, a2] = S.ar, legC = C.leg, armC = C.arm;
   let L = limb(-2.5, hipY, Q.lb, S.leg, Q.lb - Q.kb, S.leg, l0, l1, l2, legC, 16);
-  foot(L[2], L[3], Q.lb - Q.kb, S.foot[0], S.foot[1], X.foot || legC, 16, tur);
+  if (wr) wraps([L[0], L[1], L[2], L[3]], 0.45, 0.9, l2 + 0.35, tone(wr, -25));
+  foot(L[2], L[3], Q.lb - Q.kb, S.foot[0], S.foot[1], X.foot || legC, 16, tur ? 1 : wr ? 2 : 0);
   if (tur) pad(L[0], L[1], 2.7, C.pad, 16);
   g.save(); g.translate(0, hipY); g.rotate(Q.lean); g.translate(0, -hipY);
   const A = limb(-S.bodyW * 0.28, shY + 2.5, Q.ab, S.arm, Q.ab + Q.eb, S.arm, a0, a1, a2, armC, 16);
   if (tur) wrapBand([A[0], A[1], A[2], A[3]], 0.62, 0.85, a2 + 0.45, C.pad, 16);
-  if (C.weapon && C.dual) weapon(C.weapon, A[2], A[3], Q.wb, t);
+  else if (wr) wraps([A[0], A[1], A[2], A[3]], 0.55, 0.92, a2 + 0.3, tone(wr, -25));
+  if (C.weapon && (C.dual || style === 'brute')) weapon(C.weapon === 'club' ? null : C.weapon, A[2], A[3], Q.wb, t);
   fist(A[2], A[3], S.hand, X.hand || armC, 16, Q.ab + Q.eb);
   torsoOf(style, S, hipY, shY, e, t);
   g.restore();
   L = limb(2.5, hipY, Q.lf, S.leg, Q.lf - Q.kf, S.leg, l0, l1, l2, legC, 0);
-  foot(L[2], L[3], Q.lf - Q.kf, S.foot[0], S.foot[1], X.foot || legC, 0, tur);
+  if (wr) wraps([L[0], L[1], L[2], L[3]], 0.45, 0.9, l2 + 0.35, wr);
+  foot(L[2], L[3], Q.lf - Q.kf, S.foot[0], S.foot[1], X.foot || legC, 0, tur ? 1 : wr ? 2 : 0);
   if (tur) pad(L[0], L[1], 2.8, C.pad, 0);
   overLegs(style, S, hipY, e);
   g.save(); g.translate(0, hipY); g.rotate(Q.lean); g.translate(0, -hipY);
@@ -1361,23 +1765,35 @@ function drawChar(e, cam = G.cam) {
   const sx = S.bodyW * 0.22 + Q.hx;
   const F = limb(sx, shY + 2.5, Q.af, S.arm, Q.af + Q.ef, S.arm, a0, a1, a2, armC, 0);
   if (tur) { wrapBand([F[0], F[1], F[2], F[3]], 0.62, 0.85, a2 + 0.45, C.pad, 0); pad(F[0], F[1], 2.1, C.pad, 0); }
-  if (Q.trail && C.weapon) swoosh(sx, shY + 2.5, S.arm * 2 + (C.weapon === 'bo' ? 22 : 15), Q.trail[0], Q.trail[1], e.pl ? '#e8f4ff' : '#ffb0a0');
+  else if (wr) wraps([F[0], F[1], F[2], F[3]], 0.55, 0.92, a2 + 0.3, wr);
+  if (Q.trail && C.weapon) swoosh(sx, shY + 2.5, S.arm * 2 + (C.weapon === 'bo' ? 22 : C.weapon === 'club' ? 26 : 15), Q.trail[0], Q.trail[1], e.pl ? (e.powT > 0 ? '#ffc060' : '#e8f4ff') : '#ffb0a0');
   if (C.weapon) weapon(C.weapon, F[2], F[3], Q.wf, t);
   fist(F[2], F[3], S.hand, X.hand || armC, 0, Q.af + Q.ef);
+  if (C.weapon === 'kusari') kusariChain(e, F, S, sc);
   if (style === 'samurai' || style === 'blade') { g.beginPath(); g.ellipse(sx, shY + 1.5, 4.2, 3.4, 0.3, 0, TAU); outlineFill(ball(sx, shY, 4.2, style === 'samurai' ? '#2a2a36' : '#c6ccd8'), 1.8); }
   if (style === 'rhino' || style === 'boar') { g.beginPath(); g.ellipse(sx - 0.5, shY + 1.5, 4.5, 3.6, 0, 0, TAU); outlineFill(ball(sx, shY, 4.5, C.torso), 1.8); }
+  if (style === 'brute') { // голяма раменна броня
+    g.beginPath(); g.moveTo(sx - 5, shY - 1.5); g.quadraticCurveTo(sx + 1, shY - 5, sx + 6.5, shY - 0.5); g.lineTo(sx + 6, shY + 5); g.quadraticCurveTo(sx, shY + 6.5, sx - 5.5, shY + 4.5); g.closePath();
+    outlineFill(vgrad(shY - 4, shY + 6, [[0, '#9aa0ac'], [0.5, '#5a606c'], [1, '#2a2e36']]), 1.8);
+    g.strokeStyle = '#b02a2a'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(sx - 5, shY + 1.5); g.quadraticCurveTo(sx, shY - 0.5, sx + 6.2, shY + 2); g.stroke();
+  }
+  if (style === 'ninja' && (e.def.plate || e.def.hair)) { g.beginPath(); g.ellipse(sx, shY + 1.2, 3.4, 2.7, 0.3, 0, TAU); outlineFill(ball(sx, shY, 3.4, e.def.plate ? '#9aa2ae' : tone(C.suit, -30)), 1.5); }
   g.restore();
   g.restore();
+  e.C = C0;
   if (e.state === 'windup' || (e.boss && e.move && e.phase === (e.move === 'charge' ? 0 : 1) && ['melee', 'charge', 'laser'].includes(e.move))) {
     if (G.t & 4) txt('!', e.x - cam, e.y - e.z - (S.leg * 2 + S.torso + S.headR * 2 + 10) * sc, 11, '#ff4030');
   }
 }
+let SHD = null;
 function shadow(x, y, z, w) {
   const k = 1 - Math.min(z, 120) / 200, r = Math.max(1, w * k);
-  g.save(); g.translate(x, y); g.scale(1, 0.3);
-  const gr = g.createRadialGradient(0, 0, 0, 0, 0, r);
-  gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(0.55, 'rgba(0,0,0,.32)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-  g.fillStyle = gr; g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fill(); g.restore();
+  if (!SHD) {
+    SHD = document.createElement('canvas'); SHD.width = SHD.height = 64; const c = SHD.getContext('2d');
+    const gr = c.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(0.55, 'rgba(0,0,0,.32)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = gr; c.fillRect(0, 0, 64, 64);
+  }
+  g.drawImage(SHD, x - r, y - r * 0.3, r * 2, r * 0.6);
 }
 
 // ---------------------------------------------------------------- предмети
@@ -1422,9 +1838,19 @@ function drawItem(it, cam) {
 function drawProj(p, cam) {
   const x = p.x - cam, y = p.y - p.z;
   g.save(); g.globalCompositeOperation = 'lighter';
-  const gc = { star: '#c0d0ff', blade: '#e0e8ff', laser: '#ff3030', bullet: '#ffd060', acid: '#8ee04a', knife: '#e0e8ff', orb: '#c070ff' }[p.type];
-  glow(x, y, p.type === 'orb' ? 16 : 9, gc, 0.6); g.restore();
+  const gc = { star: '#c0d0ff', blade: '#e0e8ff', laser: '#ff3030', bullet: '#ffd060', acid: '#8ee04a', knife: '#e0e8ff', orb: '#c070ff', bomb: '#ff8040' }[p.type];
+  glow(x, y, p.type === 'orb' ? 16 : 9, gc, p.type === 'bomb' ? (p.fuse >= 0 && (p.fuse & 4) ? 0.9 : 0.3) : 0.6); g.restore();
   switch (p.type) {
+    case 'bomb': {
+      const r = 3.6, blink = p.fuse >= 0 && (p.fuse & 4);
+      g.beginPath(); g.arc(x, y - r, r, 0, TAU); outlineFill(ball(x, y - r, r, blink ? '#a02020' : '#2a2a32'), 1.2);
+      rrect(x - 1.2, y - r * 2 - 1.2, 2.4, 1.6, 0.4); outlineFill('#6a6a72', 0.8);
+      const fx = x + 1.6 + Math.sin(p.t * 0.3) * 0.4, fy = y - r * 2 - 2.8;
+      g.strokeStyle = '#c9a24a'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(x, y - r * 2 - 1); g.quadraticCurveTo(x + 1.5, y - r * 2 - 1.5, fx, fy); g.stroke();
+      add(() => glow(fx, fy, 3 + (p.t & 2), '#ffd060', 1));
+      circ(x - 1.2, y - r - 1.2, 0.9, 'rgba(255,255,255,.7)', null);
+      break;
+    }
     case 'star': case 'blade': {
       g.save(); g.translate(x, y); g.rotate(p.t * 0.5);
       const r = p.type === 'blade' ? 6.5 : 5; g.beginPath();
@@ -1503,6 +1929,13 @@ function drawParts(cam) {
     } else if (q.k === 'ring') { g.save(); g.globalAlpha = a; g.strokeStyle = '#fff'; g.lineWidth = 2 * a + 0.5; g.beginPath(); g.ellipse(x, y, (1 - a) * 26 + 4, ((1 - a) * 26 + 4) * 0.6, 0, 0, TAU); g.stroke(); g.restore(); }
     else if (q.k === 'dust') { const r = q.sz; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, q.col + (a * 0.45).toFixed(3) + ')'); gr.addColorStop(1, q.col + '0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
     else if (q.k === 'chunk') { g.globalAlpha = Math.min(1, a * 2); g.save(); g.translate(x, y); g.rotate(q.rot + q.life * 0.2); g.fillStyle = q.col; g.fillRect(-q.sz / 2, -q.sz / 2, q.sz, q.sz * 0.7); g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(-q.sz / 2, -q.sz / 2, q.sz, q.sz * 0.2); g.restore(); g.globalAlpha = 1; }
+    else if (q.k === 'mote') { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = a; g.fillStyle = q.col; g.beginPath(); g.arc(x, y, q.sz * (0.6 + a * 0.6), 0, TAU); g.fill(); g.restore(); }
+    else if (q.k === 'streak') { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = a; g.fillStyle = hgrad(x, x - q.w, [[0, rgba(q.col, 0.9)], [1, rgba(q.col, 0)]]); g.fillRect(Math.min(x, x - q.w), y - 1.2, Math.abs(q.w), 2.4); g.restore(); }
+    else if (q.k === 'wave') {
+      const k = 1 - a, rx = 20 + k * 200, ry = rx * 0.22;
+      g.save(); g.globalAlpha = a; g.lineWidth = 3 * a + 1; g.strokeStyle = q.col; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, TAU); g.stroke();
+      g.globalCompositeOperation = 'lighter'; g.lineWidth = 1; g.strokeStyle = '#fff4d0'; g.beginPath(); g.ellipse(x, y, rx * 0.92, ry * 0.92, 0, 0, TAU); g.stroke(); g.restore();
+    }
     else if (q.k === 'confetti') { g.fillStyle = q.col; g.save(); g.translate(q.x, q.y); g.rotate(q.y * 0.05); g.fillRect(-1.5, -1, 3, 2); g.restore(); }
   }
   g.globalAlpha = 1;
@@ -1979,11 +2412,31 @@ function drawWorld() {
   if (G.shake) g.translate(rnd(-G.shake, G.shake), rnd(-G.shake, G.shake) * 0.6);
   drawBG(L.theme, cam);
   for (const h of hazards) if (h.k === 'laser' || (h.k === 'car' && h.t <= h.warn)) drawHazard(h, cam);
+  // мишената на летящите бомби
+  for (const p of projs) if (p.type === 'bomb' && p.fuse < 0) {
+    const k = clamp(p.t / 52, 0, 1), x = p.tx - cam;
+    g.strokeStyle = `rgba(255,${G.t & 4 ? 60 : 160},40,${(0.4 + k * 0.5).toFixed(2)})`; g.lineWidth = 1.2;
+    g.beginPath(); g.ellipse(x, p.ty, 30 - k * 8, (30 - k * 8) * 0.3, 0, 0, TAU); g.stroke();
+    g.beginPath(); g.ellipse(x, p.ty, 4, 1.4, 0, 0, TAU); g.stroke();
+  }
+  if (G.tint > 0) { g.fillStyle = `rgba(0,0,20,${(Math.min(1, G.tint / 20) * 0.45).toFixed(2)})`; g.fillRect(0, 0, W, H); }
   const list = [];
   for (const o of props) list.push([o.y, () => { shadow(o.x - cam + 2, o.y, 0, 17); drawProp(o, cam); }]);
   for (const it of items) list.push([it.y, () => { shadow(it.x - cam, it.y, it.z, 13); drawItem(it, cam); }]);
-  for (const e of ents) list.push([e.y, () => { if (!e.ghost) shadow(e.x - cam, e.y, e.z, 13 * (e.sc || 1) * CHS); drawChar(e, cam); }]);
-  if (P && P.state !== 'dead') list.push([P.y + 0.01, () => { shadow(P.x - cam, P.y, P.z, 15 * CHS); drawChar(P, cam); }]);
+  for (const e of ents) list.push([e.y, () => {
+    if (e.boss && e.hp > 0 && e.hp < e.maxhp * 0.5) add(() => glow(e.x - cam, e.y - e.z - 26 * e.sc, 38 * e.sc, '#ff3020', 0.22 + Math.sin(G.t * 0.2) * 0.06));
+    if (!e.ghost) shadow(e.x - cam, e.y, e.z, 13 * (e.sc || 1) * CHS); drawChar(e, cam);
+    if (!e.boss && e.hpT > 0 && e.hp > 0) { // малка лента живот над врага
+      const w = 22 * (e.sc || 1), x = e.x - cam - w / 2, y = e.y - e.z - 62 * (e.sc || 1);
+      g.globalAlpha = Math.min(1, e.hpT / 20); g.fillStyle = '#050505'; g.fillRect(x - 1, y - 1, w + 2, 4);
+      g.fillStyle = '#5a1010'; g.fillRect(x, y, w, 2); g.fillStyle = e.def.armor ? '#a8d8ff' : '#ff6a3a'; g.fillRect(x, y, w * e.hp / e.maxhp, 2); g.globalAlpha = 1;
+    }
+  }]);
+  if (P && P.state !== 'dead') list.push([P.y + 0.01, () => {
+    if (P.powT > 0) add(() => glow(P.x - cam, P.y - P.z - 22, 30, ['#ffd23f', '#ff7040', '#7dff7d', '#60c0ff'][(G.t >> 3) % 4], 0.35));
+    if (P.state === 'super') add(() => glow(P.x - cam, P.y - P.z - 20, 44, P.t.color, 0.4));
+    shadow(P.x - cam, P.y, P.z, 15 * CHS); drawChar(P, cam);
+  }]);
   for (const p of projs) list.push([p.y, () => { shadow(p.x - cam, p.y, p.z, 5); drawProj(p, cam); }]);
   for (const h of hazards) if (h.k === 'fall' || (h.k === 'car' && h.t > h.warn)) list.push([h.y, () => drawHazard(h, cam)]);
   list.sort((a, b) => a[0] - b[0]);
@@ -2014,13 +2467,48 @@ function hudPanel(x, y, w, h) {
 }
 function drawHUD() {
   const T = TURTLES[G.turtle];
-  hudPanel(4, 4, 160, 34);
-  g.save(); g.beginPath(); g.arc(21, 21, 13, 0, TAU); g.fillStyle = ball(21, 21, 13, '#2a3a2e'); g.fill(); g.strokeStyle = T.color; g.lineWidth = 1.5; g.stroke(); g.clip();
-  g.translate(19, 23); g.scale(1.5, 1.5); headTurtle(0, 0, 6.5, P.C, G.t); g.restore();
+  hudPanel(4, 4, 160, 42);
+  g.save(); g.beginPath(); g.arc(21, 23, 14, 0, TAU); g.fillStyle = ball(21, 23, 14, '#2a3a2e'); g.fill(); g.strokeStyle = P.pow >= 100 && (G.t & 8) ? '#ffd23f' : T.color; g.lineWidth = 1.5; g.stroke(); g.clip();
+  g.translate(19, 25); g.scale(1.5, 1.5); headTurtle(0, 0, 6.5, P.C, G.t, turtleFace(P), T.id); g.restore();
   txt(T.name, 40, 12, 7, T.color === '#8a45d6' ? '#c9a0ff' : tone(T.color, 25), 'left');
   for (let i = 0; i < Math.min(G.lives, 5); i++) { const lx = 156 - i * 9; g.beginPath(); g.ellipse(lx, 12, 3.6, 3, 0, 0, TAU); outlineFill(ball(lx, 12, 3.6, '#7a5226'), 1.4); g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(lx - 2, 11.6, 4, 0.6); }
   hpBar(40, 19, 118, 6, P.hp / 100, '#5fe05f');
-  txt(String(G.score).padStart(7, '0'), 158, 31, 6, '#ffd23f', 'right', FP, 2);
+  // метър за супер удара
+  const full = P.pow >= 100, pw = 118 * P.pow / 100;
+  rrect(38.5, 27.5, 121, 5, 1.5); g.fillStyle = '#050505'; g.fill();
+  g.fillStyle = '#2a1a08'; g.fillRect(40, 29, 118, 2.2);
+  g.fillStyle = full ? hgrad(40, 158, [[0, '#ff5a1a'], [((G.t * 0.02) % 1), '#fff6a0'], [1, '#ffb020']]) : hgrad(40, 158, [[0, '#c05a10'], [1, '#ffc040']]); g.fillRect(40, 29, pw, 2.2);
+  if (full) { add(() => glow(40 + pw, 30, 8 + (G.t & 4), '#ffd23f', 0.8)); if (G.t & 16) txt('СУПЕР!', 99, 30.5, 4, '#fff6a0', 'center', FP, 1.5); }
+  if (P.powT > 0) { rrect(40, 34.5, 118 * P.powT / 540, 1.6, 0.8); g.fillStyle = ['#ffd23f', '#ff7040', '#7dff7d', '#60c0ff'][(G.t >> 3) % 4]; g.fill(); }
+  txt(String(G.score).padStart(7, '0'), 158, 40, 6, '#ffd23f', 'right', FP, 2);
+  if (G.diff !== 1) txt(DIFF[G.diff].name, 40, 40, 4, G.diff ? '#ff8a7a' : '#9ad09a', 'left', FP, 1.5);
+  // поредица от удари
+  if (G.chain >= 3) {
+    const k = Math.min(1, G.chainT / 25), pop = G.chainT > 100 ? 1 + (G.chainT - 100) * 0.04 : 1;
+    g.globalAlpha = k; g.save(); g.translate(14, 64); g.scale(pop, pop);
+    gradTitle(String(G.chain), 0, 0, 18, G.chain >= 20 ? ['#fff6a0', '#ff8a1a', '#a01a10'] : ['#ffffff', '#ffd23f', '#b07a10'], FT_T); g.restore();
+    txt('УДАРА', 14 + String(G.chain).length * 6 + 4, 66, 6, '#eaffea', 'left', FP, 2); g.globalAlpha = 1;
+  }
+  // подсказки в първия рунд
+  if (G.lvl === 0 && G.introT <= 0 && G.stats.t < 1500 && !G.bossStage) {
+    const tips = ['УДАР 3 пъти = комбо', 'СКОК + УДАР = ритник', 'Пълен метър → СПЕЦ = СУПЕР удар', 'Враг до теб + джойстик НАОБРАТНО + УДАР = хвърляне', 'СПЕЦ без метър = въртене (струва живот)'];
+    const i = Math.floor(G.stats.t / 300) % tips.length, f = G.stats.t % 300, a = Math.min(1, f / 20, (300 - f) / 20);
+    g.globalAlpha = a * 0.95; rrect(W / 2 - 120, H - 66, 240, 16, 6); g.fillStyle = 'rgba(0,0,0,.6)'; g.fill(); txt(tips[i], W / 2, H - 57.5, 5, '#fff6a0', 'center', FP, 0); g.globalAlpha = 1;
+  }
+  // кадър при супер удар
+  if (G.cut) {
+    const c = G.cut, k = Math.min(1, (56 - c.t) / 8, c.t / 10), y = 74, dx = (1 - k) * -W;
+    g.save(); g.globalAlpha = k;
+    g.beginPath(); g.moveTo(dx, y - 22); g.lineTo(dx + W, y - 30); g.lineTo(dx + W, y + 18); g.lineTo(dx, y + 26); g.closePath();
+    g.fillStyle = hgrad(0, W, [[0, rgba(c.T.color, 0.95)], [0.6, rgba(c.T.color, 0.6)], [1, 'rgba(0,0,0,0)']]); g.fill();
+    g.strokeStyle = '#fff6a0'; g.lineWidth = 2; g.stroke();
+    g.save(); g.beginPath(); g.moveTo(dx, y - 22); g.lineTo(dx + W, y - 30); g.lineTo(dx + W, y + 18); g.lineTo(dx, y + 26); g.closePath(); g.clip();
+    g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 1; g.beginPath(); for (let i = 0; i < 14; i++) { const yy = y - 26 + i * 4, ox = ((G.t * 9 + i * 53) % 600) - 100; g.moveTo(ox, yy); g.lineTo(ox + 60, yy - 1); } g.stroke();
+    g.translate(dx + 70, y + 8); g.scale(3.2, 3.2); headTurtle(0, 0, 7, colorsFor({ pl: true, t: c.T }), G.t, 'yell', c.T.id, 2); g.restore();
+    txt(c.T.name, dx + 265, y - 13, 8, '#fff6a0');
+    gradTitle(c.T.sup + '!', dx + 265, y + 7, 22, ['#ffffff', '#ffd23f', '#d0601a']);
+    g.restore();
+  }
   const bs = ents.filter(e => e.boss && e.hp > 0);
   bs.forEach((b, i) => {
     const y = 6 + i * 26;
@@ -2085,10 +2573,12 @@ function drawTitle() {
   logo(54);
   for (let i = 0; i < 4; i++) { const e = fakeTurtle(i); e.x = 150 + i * 60; e.y = 198; e.face = i < 2 ? 1 : -1; shadow(e.x, e.y, 0, 20); drawChar(e, 0); }
   UI.cols = 1;
-  button(W / 2 - 70, 208, 140, 22, 'ИГРАЙ', () => { G.startLvl = 0; setScene('select'); }, 10);
-  button(W / 2 - 70, 235, 66, 18, 'РУНДОВЕ', () => setScene('levels'), 6);
-  button(W / 2 + 4, 235, 66, 18, Snd.muted ? 'ЗВУК: НЕ' : 'ЗВУК: ДА', () => { Snd.setMuted(!Snd.muted); if (!Snd.muted) Music.start('title'); }, 6);
+  button(W / 2 - 70, 206, 140, 22, 'ИГРАЙ', () => { G.startLvl = 0; setScene('select'); }, 10);
+  button(W / 2 - 112, 234, 70, 18, 'РУНДОВЕ', () => setScene('levels'), 6);
+  button(W / 2 - 37, 234, 74, 18, 'НИВО: ' + DIFF[G.diff].name, () => { G.diff = (G.diff + 1) % DIFF.length; store.set('diff', G.diff); }, 5);
+  button(W / 2 + 42, 234, 70, 18, Snd.muted ? 'ЗВУК: НЕ' : 'ЗВУК: ДА', () => { Snd.setMuted(!Snd.muted); if (!Snd.muted) Music.start('title'); }, 6);
   button(W - 74, 8, 66, 16, 'ЦЯЛ ЕКРАН', goFull, 5);
+  if (installEvt) button(W - 74, 28, 66, 16, 'ИНСТАЛИРАЙ', installApp, 5);
   if (G.best) txt('РЕКОРД ' + G.best, 8, 14, 6, '#ffd23f', 'left', FP, 2);
   txt('Фен игра. Не е официален продукт.', W / 2, H - 7, 5, '#9ab09a', 'center', FP, 0);
   Music.start('title');
@@ -2119,11 +2609,12 @@ function drawSelect() {
     if (sel) add(() => glow(x + w / 2, y + 80, 60, T.color, 0.35));
     const e = fakeTurtle(i, sel && (G.t % 60) < 20 ? 'attack' : 'idle'); if (e.state === 'attack') e.st = G.t % 20; e.sc = 1.6; e.x = x + w / 2; e.y = y + 118;
     shadow(e.x, e.y, 0, 26); drawChar(e, 0);
-    gradTitle(T.name, x + w / 2, y + 134, 14, [tone(T.color, 60), tone(T.color, 20), tone(T.color, -35)]);
-    txt(T.desc, x + w / 2, y + 149, 6, '#eaffea', 'center', FP, 2);
+    gradTitle(T.name, x + w / 2, y + 132, 14, [tone(T.color, 60), tone(T.color, 20), tone(T.color, -35)]);
+    txt(T.desc, x + w / 2, y + 145, 5, '#eaffea', 'center', FP, 2);
+    txt(T.sup, x + w / 2, y + 154, 4, '#ffd23f', 'center', FP, 1.5);
     ['СИЛА', 'БЪРЗ', 'ОБХВАТ'].forEach((lb, j) => {
-      txt(lb, x + 8, y + 161 + j * 9, 5, '#9ab09a', 'left', FP, 0);
-      for (let k = 0; k < 5; k++) { rrect(x + 52 + k * 9.5, y + 158 + j * 9, 8, 5, 1); g.fillStyle = k < T.stat[j] ? vgrad(y + 158 + j * 9, y + 163 + j * 9, [[0, '#a0ff90'], [1, '#2a9a2a']]) : '#1a2a1a'; g.fill(); }
+      txt(lb, x + 8, y + 165 + j * 8, 5, '#9ab09a', 'left', FP, 0);
+      for (let k = 0; k < 5; k++) { rrect(x + 52 + k * 9.5, y + 162.5 + j * 8, 8, 5, 1); g.fillStyle = k < T.stat[j] ? vgrad(y + 162.5 + j * 8, y + 167.5 + j * 8, [[0, '#a0ff90'], [1, '#2a9a2a']]) : '#1a2a1a'; g.fill(); }
     });
   }
   backButton();
@@ -2155,27 +2646,41 @@ function panel(h) {
   rrect(W / 2 - 132, H / 2 - h / 2, 264, h, 9); g.fillStyle = vgrad(H / 2 - h / 2, H / 2 + h / 2, [[0, 'rgba(30,52,34,.97)'], [1, 'rgba(6,14,8,.97)']]); g.fill(); g.strokeStyle = '#6fd04a'; g.lineWidth = 2; g.stroke();
 }
 function drawPause() {
-  panel(130); UI.cols = 1;
-  gradTitle('ПАУЗА', W / 2, H / 2 - 42, 22, ['#fff0a0', '#ffd23f', '#b07a10']);
-  button(W / 2 - 80, H / 2 - 20, 160, 22, 'ПРОДЪЛЖИ', togglePause, 8);
-  button(W / 2 - 80, H / 2 + 8, 76, 20, Snd.muted ? 'ЗВУК: НЕ' : 'ЗВУК: ДА', () => Snd.setMuted(!Snd.muted), 6);
-  button(W / 2 + 4, H / 2 + 8, 76, 20, 'МЕНЮ', () => { setScene('title'); }, 6);
-  txt('Стрелки/джойстик: ход  J/УДАР  K/СКОК  L/СПЕЦ', W / 2, H / 2 + 46, 5, '#9ab09a', 'center', FP, 0);
+  panel(150); UI.cols = 1;
+  gradTitle('ПАУЗА', W / 2, H / 2 - 52, 22, ['#fff0a0', '#ffd23f', '#b07a10']);
+  button(W / 2 - 110, H / 2 - 30, 220, 22, 'ПРОДЪЛЖИ', togglePause, 8);
+  button(W / 2 - 110, H / 2, 70, 20, Snd.muted ? 'ЗВУК: НЕ' : 'ЗВУК: ДА', () => Snd.setMuted(!Snd.muted), 5);
+  button(W / 2 - 35, H / 2, 70, 20, G.vib ? 'ВИБР.: ДА' : 'ВИБР.: НЕ', () => { G.vib = !G.vib; store.set('vib', G.vib); buzz(30); }, 5);
+  button(W / 2 + 40, H / 2, 70, 20, 'МЕНЮ', () => { setScene('title'); }, 5);
+  txt('Ход: стрелки/WASD   УДАР: J   СКОК: K   СПЕЦ: L', W / 2, H / 2 + 34, 5, '#9ab09a', 'center', FP, 0);
+  txt('Враг до теб + джойстик наобратно + УДАР = хвърляне', W / 2, H / 2 + 46, 5, '#9ab09a', 'center', FP, 0);
+  txt('Пълен метър + СПЕЦ = СУПЕР удар', W / 2, H / 2 + 58, 5, '#ffd23f', 'center', FP, 0);
 }
 function drawClear() {
-  panel(140); UI.cols = 1;
-  gradTitle('РУНД ' + (G.lvl + 1) + ' ПРЕМИНАТ!', W / 2, H / 2 - 48, 18, ['#e8ffd0', '#7dff7d', '#1a8a2a']);
-  txt('Бонус: ' + G.bonus, W / 2, H / 2 - 24, 8, '#ffd23f');
-  txt('Точки: ' + G.score, W / 2, H / 2 - 8, 8, '#eaffea');
+  panel(176); UI.cols = 1;
+  gradTitle('РУНД ' + (G.lvl + 1) + ' ПРЕМИНАТ!', W / 2, H / 2 - 66, 18, ['#e8ffd0', '#7dff7d', '#1a8a2a']);
+  const S = G.stats, sec = Math.floor(S.t / 60), x0 = W / 2 - 112;
+  [['Победени', S.kills], ['Най-дълго комбо', S.maxChain], ['Понесени щети', S.dmg], ['Време', Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0')]].forEach(([k, v], i) => {
+    txt(k, x0, H / 2 - 44 + i * 12, 6, '#9ad09a', 'left', FP, 0); txt(String(v), x0 + 150, H / 2 - 44 + i * 12, 6, '#eaffea', 'right', FP, 0);
+  });
+  // оценката се „подпечатва“
+  const gr = G.grade || GRADES[3], k = clamp((G.t - (G.clearAt || 0) - 20) / 12, 0, 1), sz = 46 * (2.2 - 1.2 * ease(k));
+  if (k > 0) {
+    g.save(); g.globalAlpha = k; g.translate(W / 2 + 76, H / 2 - 26); g.rotate(-0.15);
+    g.beginPath(); g.arc(0, 0, 24, 0, TAU); g.strokeStyle = gr[3]; g.lineWidth = 2.5; g.stroke();
+    gradTitle(gr[0], 0, 2, sz, ['#ffffff', gr[3], tone(gr[3], -50)]); g.restore();
+    txt('ОЦЕНКА', W / 2 + 76, H / 2 + 4, 5, '#9ab09a', 'center', FP, 0);
+  }
+  txt('Бонус: ' + G.bonus + '   Точки: ' + G.score, W / 2, H / 2 + 18, 6, '#ffd23f', 'center', FP, 2);
   const last = G.lvl >= LEVELS.length - 1;
-  button(W / 2 - 80, H / 2 + 10, 160, 24, last ? 'ФИНАЛ' : 'СЛЕДВАЩ РУНД', () => { if (last) { setScene('ending'); Music.start('end'); confetti(); } else startLevel(G.lvl + 1); }, 8);
-  button(W / 2 - 50, H / 2 + 40, 100, 18, 'МЕНЮ', () => setScene('title'), 6);
+  button(W / 2 - 80, H / 2 + 30, 160, 22, last ? 'ФИНАЛ' : 'СЛЕДВАЩ РУНД', () => { if (last) { setScene('ending'); Music.start('end'); confetti(); } else startLevel(G.lvl + 1); }, 8);
+  button(W / 2 - 50, H / 2 + 58, 100, 18, 'МЕНЮ', () => setScene('title'), 6);
 }
 function drawGameOver() {
   panel(130); UI.cols = 1;
   gradTitle('КРАЙ НА ИГРАТА', W / 2, H / 2 - 40, 18, ['#ffd0c0', '#ff5a4a', '#8a1010']);
   txt('Точки: ' + G.score, W / 2, H / 2 - 18, 8, '#ffd23f');
-  button(W / 2 - 80, H / 2 - 2, 160, 24, 'ПРОДЪЛЖИ РУНДА', () => { G.lives = 3; G.conts++; G.score = Math.floor(G.score / 2); startLevel(G.lvl); }, 7);
+  button(W / 2 - 80, H / 2 - 2, 160, 24, 'ПРОДЪЛЖИ РУНДА', () => { G.lives = D_().lives; G.conts++; G.score = Math.floor(G.score / 2); startLevel(G.lvl); }, 7);
   button(W / 2 - 50, H / 2 + 30, 100, 18, 'МЕНЮ', () => setScene('title'), 6);
 }
 function confetti() { parts = []; for (let i = 0; i < 120; i++) parts.push({ k: 'confetti', x: rnd(W), y: rnd(-H, 0), vx: rnd(-0.4, 0.4), vy: rnd(0.6, 1.6), vz: 0, z: 0, life: 99999, max: 99999, col: ['#ffd23f', '#e0342f', '#2f6fe0', '#8a45d6', '#f08a1c', '#5fe05f'][i % 6] }); }
@@ -2212,6 +2717,8 @@ function render() {
     case 'ending': drawEnding(); break;
   }
   if (G.sel >= UI.btns.length) G.sel = 0;
+  const sup = G.scene === 'play' && !!P && P.pow >= 100;
+  if (sup !== UI.sup) { UI.sup = sup; const b = $('btnS'); b.classList.toggle('super', sup); b.textContent = sup ? 'СУПЕР' : 'СПЕЦ'; }
 }
 
 // ---------------------------------------------------------------- цикъл
@@ -2232,5 +2739,18 @@ function frame(now) {
 if (document.fonts && document.fonts.load) { document.fonts.load('10px "Press Start 2P"').catch(() => { }); document.fonts.load('20px "Russo One"').catch(() => { }); }
 setScene('title');
 requestAnimationFrame(frame);
-window.__dbg = { startGame, startLevel, spawnBoss, spawnEnemy, get P() { return P; }, get ents() { return ents; }, inp, keys, LEVELS };
+// икона на приложението (за инсталиране на телефона), рисувана със същия код като героите
+function makeIcon(n, pad = 1) {
+  const c = document.createElement('canvas'); c.width = c.height = n;
+  const keep = g; g = c.getContext('2d');
+  try {
+    g.setTransform(n / 64, 0, 0, n / 64, 0, 0);
+    g.fillStyle = vgrad(0, 64, [[0, '#2a5a20'], [1, '#0b0f0c']]); g.fillRect(0, 0, 64, 64);
+    add(() => glow(32, 30, 34, '#8ef05a', 0.45));
+    const k = 2.6 * pad; g.translate(32 + 3 * k, 33); g.scale(k, k);
+    headTurtle(0, 0, 7, colorsFor({ pl: true, t: TURTLES[0] }), 0, 'calm', 'leo', 0);
+  } finally { g = keep; }
+  return c.toDataURL('image/png');
+}
+window.__dbg = { render, cv, makeIcon,  startGame, startLevel, spawnBoss, spawnEnemy, lob, startSuper, get P() { return P; }, get ents() { return ents; }, get projs() { return projs; }, get items() { return items; }, inp, keys, LEVELS, TURTLES, colorsFor };
 })();

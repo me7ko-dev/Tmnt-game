@@ -1,0 +1,23 @@
+// Снимки на новите екрани: меню, HUD, супер удар, пауза, оценка на рунда
+import { launch, PAGE, SHOTS } from './pw.mjs';
+const b = await launch();
+const pg = await b.newPage({ viewport: { width: 960, height: 540 } });
+const errs = []; pg.on('pageerror', e => errs.push(e.message));
+const shot = n => pg.screenshot({ path: `${SHOTS}/ui-${n}.png` });
+await pg.goto(PAGE + '#god'); await pg.waitForTimeout(700);
+await shot('title');
+await pg.evaluate(() => { const D = window.__dbg, G = window.__G; D.startGame(1, 0); G.introT = 0; G.hazT = 1e9; D.P.pow = 100; for (const c of 'nkb') D.spawnEnemy(c, 1, false); });
+await pg.waitForTimeout(1500);
+await pg.evaluate(() => { const G = window.__G; G.chain = 14; G.chainT = 80; });
+await shot('hud');
+await pg.evaluate(() => { const D = window.__dbg; D.startSuper(D.P); });
+await pg.waitForTimeout(250); await shot('cutin');
+await pg.waitForTimeout(500); await shot('super');
+await pg.evaluate(() => { const D = window.__dbg, G = window.__G; D.lob(G.cam + 400, 200, 30, D.P.x, D.P.y); });
+await pg.waitForTimeout(400); await shot('bomb');
+await pg.keyboard.press('KeyP'); await pg.waitForTimeout(300); await shot('pause');
+await pg.keyboard.press('KeyP');
+await pg.evaluate(() => { const G = window.__G; G.stats = { kills: 31, maxChain: 22, dmg: 24, t: 60 * 154 }; G.bossStage = 4; G.clearT = 149; });
+await pg.waitForTimeout(1500); await shot('clear');
+console.log('ERRORS', errs);
+await b.close();
